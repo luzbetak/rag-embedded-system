@@ -1,6 +1,7 @@
-# RAG System
+Retrieval-Augmented Generation (RAG)
+====================================
 
-A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage and sentence-transformers for embeddings.
+RAG system using MongoDB for document storage and sentence-transformers for embeddings.
 
 -----------------------------------------------------------------------------------------------------
 ## Quick Start
