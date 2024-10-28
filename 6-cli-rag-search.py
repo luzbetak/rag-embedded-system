@@ -12,7 +12,7 @@ os.environ['OMP_NUM_THREADS'] = '1'
 class CLISearch:
     def __init__(self):
         self.query_engine = QueryEngine()
-    
+
     def print_results(self, results):
         print("\nSearch Results:")
         print("-" * 50)
@@ -31,20 +31,20 @@ class CLISearch:
             if 'score' in doc:
                 print(f"Similarity Score: {doc['score']:.3f}")
             print("-" * 30)
-            
+
     async def search_loop(self):
         print("\nRAG CLI Search")
         print("=" * 50)
         print("Enter 'exit' to quit")
         print("=" * 50)
-        
+
         while True:
             query = input("\nEnter search query: ")
-            
+
             if query.lower() == 'exit':
                 print("\nGoodbye!")
                 break
-                
+
             print("\nSearching...")
             try:
                 results = await self.query_engine.search(query)

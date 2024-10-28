@@ -2,6 +2,7 @@
 
 from pymongo import MongoClient, ReplaceOne
 from loguru import logger
+import numpy as np
 
 class Database:
     def __init__(self):
@@ -21,7 +22,7 @@ class Database:
                     'url': doc['url'],
                     'title': doc['title'],
                     'content': doc['content'],
-                    'embedding': embedding
+                    'embedding': embedding.tolist()  # Convert numpy array to list for MongoDB storage
                 }
                 docs_to_insert.append(doc_to_insert)
 
@@ -32,13 +33,11 @@ class Database:
 
         # Prepare the bulk write operations with upsert
         operations = [
-            {
-                'replaceOne': {
-                    'filter': {'url': doc['url']},
-                    'replacement': doc,
-                    'upsert': True
-                }
-            }
+            ReplaceOne(
+                {'url': doc['url']},
+                doc,
+                upsert=True
+            )
             for doc in docs_to_insert
         ]
 
@@ -51,57 +50,66 @@ class Database:
         except Exception as e:
             logger.error(f"Error batch storing documents: {e}")
 
+    def get_similar_documents(self, query_embedding, top_k=5):
+        """
+        Find similar documents using vector similarity search
+        
+        Args:
+            query_embedding (np.ndarray): The embedding vector of the query
+            top_k (int): Number of similar documents to return
+            
+        Returns:
+            list: List of similar documents with their similarity scores
+        """
+        try:
+            # Convert query embedding to list for MongoDB comparison
+            query_embedding = query_embedding.tolist()
 
-def load_documents():
-    from vectorization import VectorizationPipeline
-    from data_ingestion import load_data, preprocess_data
+            # Aggregate pipeline for vector similarity search
+            pipeline = [
+                {
+                    "$addFields": {
+                        "similarity": {
+                            "$reduce": {
+                                "input": {"$zip": {"inputs": ["$embedding", query_embedding]}},
+                                "initialValue": 0,
+                                "in": {
+                                    "$add": [
+                                        "$$value",
+                                        {"$multiply": ["$$this.0", "$$this.1"]}
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {"$sort": {"similarity": -1}},
+                {"$limit": top_k},
+                {
+                    "$project": {
+                        "_id": 0,
+                        "title": 1,
+                        "content": 1,
+                        "url": 1,
+                        "score": "$similarity"
+                    }
+                }
+            ]
 
-    # Initialize database and vectorization pipeline
-    db = Database()
-    vectorization_pipeline = VectorizationPipeline()
+            # Execute the aggregation pipeline
+            results = list(self.collection.aggregate(pipeline))
+            
+            if not results:
+                logger.warning("No similar documents found")
+                return []
 
-    # Load and preprocess data
-    logger.info("Loading and processing documents...")
-    processed_docs = preprocess_data(load_data("data/search-index.json"))
+            logger.info(f"Found {len(results)} similar documents")
+            return results
 
-    # Generate embeddings for the processed documents
-    embeddings = vectorization_pipeline.generate_embeddings([doc["content"] for doc in processed_docs])
+        except Exception as e:
+            logger.error(f"Error finding similar documents: {e}")
+            return []
 
-    # Store the documents and embeddings in the database
-    db.batch_store_documents(processed_docs, embeddings)
-
-
-def init_database():
-    # Initialize the MongoDB database (deletes old data and creates new indices)
-    logger.info("Initializing database...")
-    db = Database()
-    
-    # Drop the existing collection if it exists
-    logger.info("Dropping existing collection...")
-    db.collection.drop()
-    
-    # Create indices on the 'url' field
-    logger.info("Creating indices...")
-    db.collection.create_index("url", unique=True)
-
-    logger.info("Database initialized successfully!")
-
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="RAG System Database Initialization")
-    parser.add_argument('--init', action='store_true', help='Initialize the database (will delete existing data)')
-    parser.add_argument('--load', action='store_true', help='Load documents from data/search-index.json')
-    args = parser.parse_args()
-
-    if args.init:
-        init_database()
-
-    if args.load:
-        load_documents()
-
-
-if __name__ == "__main__":
-    main()
-
+    def close(self):
+        """Close the database connection"""
+        self.client.close()
