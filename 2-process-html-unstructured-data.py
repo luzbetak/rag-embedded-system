@@ -5,16 +5,13 @@ import json
 import re
 import logging
 from pathlib import Path
-from typing import Set, List, Dict, Optional
-from dataclasses import dataclass
+from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 import argparse
 
 from bs4 import BeautifulSoup
 import spacy
 from spacy.language import Language
-import nltk
-from nltk.corpus import stopwords
 
 # Set up logging
 logging.basicConfig(
@@ -23,20 +20,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@dataclass
 class IndexEntry:
-    """Data class for search index entries"""
-    url: str       # Primary identifier
-    title: str     # HTML file title
-    content: str   # Processed content for search
+    """Data class for storing summary data"""
+    def __init__(self, url: str, title: str, summary: str):
+        self.url = url
+        self.title = title
+        self.summary = summary
 
-class SearchIndexGenerator:
+class TextSummarizer:
     def __init__(self, output_dir: str = "data"):
-        """Initialize the search index generator with necessary NLP components"""
+        """Initialize the text summarizer with spaCy NLP"""
         self.output_dir = Path(output_dir)
         self.nlp = self._initialize_spacy()
-        self.stop_words = self._initialize_nltk()
-        logger.info("Initialized SearchIndexGenerator")
+        logger.info("Initialized TextSummarizer")
 
     def _initialize_spacy(self) -> Language:
         """Initialize spaCy with error handling"""
@@ -49,64 +45,32 @@ class SearchIndexGenerator:
             os.system("python -m spacy download en_core_web_sm")
             return spacy.load("en_core_web_sm")
 
-    def _initialize_nltk(self) -> Set[str]:
-        """Initialize NLTK components"""
-        try:
-            nltk.download('stopwords', quiet=True)
-            stop_words = set(stopwords.words('english'))
-            logger.info("Loaded NLTK stopwords")
-            return stop_words
-        except Exception as e:
-            logger.error(f"Error initializing NLTK: {e}")
-            raise
-
     @staticmethod
     def clean_text(text: str) -> str:
-        """Clean and normalize text"""
-        # Remove special characters and excess whitespace
-        text = re.sub(r'[^\w\s-]', ' ', text)
-        text = re.sub(r'-+', ' ', text)
-        text = re.sub(r'\s+', ' ', text)
+        """Clean and normalize text, removing unwanted words for RAG retrieval"""
+        # Remove irrelevant terms for RAG (e.g., 'menu', 'html', 'title')
+        text = re.sub(r'\b(menu|html|title|include)\b', '', text, flags=re.IGNORECASE)
+
+        # Remove special characters and multiple spaces
+        text = re.sub(r'[^\w\s-]', ' ', text)  # Remove special characters
+        text = re.sub(r'-+', ' ', text)        # Replace dashes with spaces
+        text = re.sub(r'\s+', ' ', text)       # Collapse multiple spaces
+
         return text.strip().lower()
 
-    @staticmethod
-    def clean_title(title: str) -> str:
-        """Clean and normalize title"""
-        # Remove file extension and replace separators with spaces
-        title = title.replace('.html', '')
-        title = re.sub(r'[-_]', ' ', title)
-        return title.strip()
-
-    def extract_technical_terms(self, text: str) -> Set[str]:
-        """Extract technical terms using spaCy NLP"""
+    def summarize_text(self, text: str) -> str:
+        """Summarize the text using spaCy"""
         doc = self.nlp(text)
-        technical_terms = set()
-
-        # Extract named entities
-        for ent in doc.ents:
-            if ent.label_ in {'ORG', 'PRODUCT', 'GPE', 'WORK_OF_ART', 'EVENT'}:
-                technical_terms.add(ent.text.lower())
-
-        # Extract noun chunks and filter out stopwords
-        for chunk in doc.noun_chunks:
-            if not all(token.text.lower() in self.stop_words for token in chunk):
-                technical_terms.add(chunk.text.lower())
-
-        # Add important individual tokens
-        for token in doc:
-            if (token.pos_ in {'NOUN', 'PROPN'} and 
-                token.text.lower() not in self.stop_words and
-                len(token.text) > 2):
-                technical_terms.add(token.text.lower())
-
-        return technical_terms
+        sentences = [sent.text for sent in doc.sents]
+        # Return the first 3 sentences as a simple summary (can be adjusted)
+        return ' '.join(sentences[:3])
 
     def process_html_file(self, file_path: Path) -> Optional[IndexEntry]:
-        """Process a single HTML file and return an index entry"""
+        """Process a single HTML file and return a summary"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 soup = BeautifulSoup(f, 'html.parser')
-                
+
                 # Remove script and style elements
                 for element in soup(['script', 'style']):
                     element.decompose()
@@ -120,86 +84,32 @@ class SearchIndexGenerator:
                     logger.warning(f"Skipping {file_path}: No meaningful content")
                     return None
 
+                # Generate summary
+                summary = self.summarize_text(clean_body_text)
+
                 # Create URL path and ensure it's valid
-                try:
-                    relative_path = str(file_path.relative_to(Path.cwd()))
-                    url_path = f"https://kevinluzbetak.com/{relative_path}"
-                    
-                    if not url_path or url_path.isspace():
-                        logger.warning(f"Skipping {file_path}: Invalid URL path")
-                        return None
+                relative_path = str(file_path.relative_to(Path.cwd()))
+                url_path = f"https://kevinluzbetak.com/{relative_path}"
 
-                    # Extract technical terms
-                    technical_terms = self.extract_technical_terms(clean_body_text)
-                    
-                    if not technical_terms:
-                        logger.warning(f"Skipping {file_path}: No technical terms extracted")
-                        return None
-
-                    return IndexEntry(
-                        url=url_path.strip(),
-                        title=file_path.name,
-                        content=" ".join(sorted(technical_terms))
-                    )
-                except ValueError as e:
-                    logger.warning(f"Skipping {file_path}: Unable to create valid URL path")
-                    return None
+                return IndexEntry(
+                    url=url_path.strip(),
+                    title=file_path.name,
+                    summary=summary
+                )
 
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
             return None
 
-    def _post_process_entries(self, entries: List[IndexEntry]) -> None:
-        """Post-process entries to ensure unique content and clean titles"""
-        unique_entries = {}
-        
-        for entry in entries:
-            # Skip invalid entries
-            if not entry.url or not entry.title:
-                continue
-
-            # Clean title
-            cleaned_title = self.clean_title(entry.title)
-            if not cleaned_title:
-                logger.warning(f"Skipping entry with empty title after cleaning: {entry.url}")
-                continue
-
-            # Process content
-            words = entry.content.split()
-            filtered_words = [
-                word.lower() for word in words
-                if word.isalpha() and word.lower() not in self.stop_words
-            ]
-
-            if not filtered_words:
-                logger.warning(f"Skipping entry with no valid content after filtering: {entry.url}")
-                continue
-
-            # Create final processed entry
-            unique_words = sorted(set(filtered_words))
-            processed_content = f"{cleaned_title.lower()} {' '.join(unique_words)}"
-
-            # Store using URL as key
-            unique_entries[entry.url] = {
-                "url": entry.url,
-                "title": entry.title,
-                "content": processed_content
-            }
-
-        # Update entries list
-        entries.clear()
-        entries.extend([IndexEntry(**entry_data) for entry_data in unique_entries.values()])
-        logger.info(f"Post-processing complete: {len(entries)} valid entries")
-
     def _write_index_file(self, entries: List[IndexEntry]) -> None:
-        """Write the search index to a JSON file"""
+        """Write the summaries to a JSON file"""
         self.output_dir.mkdir(exist_ok=True)
         output_file = self.output_dir / "search-index.json"
 
         # Final validation
         valid_entries = [
-            vars(entry) for entry in entries 
-            if entry.url and entry.title and entry.content
+            vars(entry) for entry in entries
+            if entry.url and entry.title and entry.summary
         ]
 
         if not valid_entries:
@@ -215,8 +125,8 @@ class SearchIndexGenerator:
             raise
 
     def generate_index(self) -> None:
-        """Generate the search index from HTML files"""
-        logger.info("Starting search index generation...")
+        """Generate the summary index from HTML files"""
+        logger.info("Starting summary index generation...")
 
         # Collect HTML files
         html_files = [
@@ -241,24 +151,21 @@ class SearchIndexGenerator:
             logger.error("No valid entries generated from HTML files")
             return
 
-        # Post-process entries
-        self._post_process_entries(entries)
-
-        # Write index file
+        # Write summaries to JSON file
         self._write_index_file(entries)
-        
-        logger.info("Search index generation completed")
+
+        logger.info("Summary index generation completed")
 
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description="Generate search index from HTML files",
+        description="Generate summary index from HTML files",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "--output-dir",
         default="data",
-        help="Output directory for search index"
+        help="Output directory for the summary index"
     )
     parser.add_argument(
         "--debug",
@@ -272,11 +179,12 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     try:
-        generator = SearchIndexGenerator(args.output_dir)
-        generator.generate_index()
+        summarizer = TextSummarizer(args.output_dir)
+        summarizer.generate_index()
     except Exception as e:
-        logger.error(f"Failed to generate search index: {e}")
+        logger.error(f"Failed to generate summary index: {e}")
         exit(1)
 
 if __name__ == "__main__":
     main()
+
