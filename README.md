@@ -140,12 +140,6 @@ brew install mongodb-community
 brew services start mongodb-community
 ```
 
-#### Windows
-1. Download MongoDB Community Server from MongoDB website
-2. Run the installer
-3. Add MongoDB to system PATH
-4. Create data directory: `C:\data\db`
-
 ## Additional Notes
 
 - The script uses sentence-transformers for generating embeddings
