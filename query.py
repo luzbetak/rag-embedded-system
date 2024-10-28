@@ -8,6 +8,7 @@ from typing import List, Optional
 from database import Database
 from vectorization import VectorizationPipeline
 from transformers import pipeline
+import numpy as np
 
 # Set OpenBLAS environment variables
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -41,7 +42,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Rest of your QueryEngine class and endpoint definitions remain the same
 class SearchRequest(BaseModel):
     text: str
     top_k: Optional[int] = 3
@@ -49,10 +49,6 @@ class SearchRequest(BaseModel):
 class SearchResponse(BaseModel):
     similar_documents: List[dict]
     generated_response: str
-
-class HealthCheckResponse(BaseModel):
-    status: str
-    version: str
 
 class QueryEngine:
     def __init__(self):
@@ -68,13 +64,30 @@ class QueryEngine:
             # Generate query embedding
             query_embedding = self.vectorization.generate_embeddings([query])[0]
             
+            # Log the query and embedding information
+            logger.info(f"Searching for query: {query}")
+            logger.info(f"Generated embedding of length: {len(query_embedding)}")
+            
             # Get similar documents
             similar_docs = self.db.get_similar_documents(
                 query_embedding=query_embedding,
                 top_k=top_k
             )
             
-            return similar_docs
+            logger.info(f"Found {len(similar_docs)} similar documents")
+            
+            # Format the results
+            formatted_docs = []
+            for doc in similar_docs:
+                formatted_doc = {
+                    'title': doc.get('title', 'N/A'),
+                    'content': doc.get('content', 'N/A'),
+                    'url': doc.get('url', 'N/A'),
+                    'score': float(doc.get('score', 0.0))
+                }
+                formatted_docs.append(formatted_doc)
+            
+            return formatted_docs
             
         except Exception as e:
             logger.error(f"Search error: {str(e)}")
@@ -83,15 +96,24 @@ class QueryEngine:
     async def generate_response(self, query: str, documents: List[dict]) -> str:
         """Generate a response based on the query and retrieved documents"""
         try:
-            # Combine document contents
-            context = "\n".join([
-                f"Document {i+1}: {doc.get('content', '')}"
-                for i, doc in enumerate(documents)
-            ])
+            if not documents:
+                return "No relevant documents found for your query."
+                
+            # Combine document contents with titles and scores
+            context_parts = []
+            for i, doc in enumerate(documents, 1):
+                score = doc.get('score', 0.0)
+                title = doc.get('title', 'Unknown')
+                content = doc.get('content', '')
+                context_parts.append(
+                    f"Document {i} (Score: {score:.3f}, Title: {title}):\n{content}\n"
+                )
+            
+            context = "\n".join(context_parts)
             
             # Create prompt for the generator
             prompt = (
-                f"Based on the following context, answer the question: {query}\n\n"
+                f"Based on the following documents, answer this question: {query}\n\n"
                 f"Context:\n{context}\n\n"
                 f"Answer:"
             )
@@ -109,7 +131,7 @@ class QueryEngine:
         """Cleanup resources"""
         self.db.close()
 
-@app.get("/health", response_model=HealthCheckResponse)
+@app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
@@ -121,20 +143,20 @@ async def health_check():
 async def search(request: SearchRequest):
     """Search endpoint that performs vector similarity search and generates a response"""
     try:
+        # Log the incoming request
+        logger.info(f"Search request received: {request.text}")
+        
         # Perform vector similarity search
         similar_docs = await query_engine.search(request.text, top_k=request.top_k)
-        
-        if not similar_docs:
-            return SearchResponse(
-                similar_documents=[],
-                generated_response="No relevant documents found for your query."
-            )
         
         # Generate a response based on similar documents
         generated_response = await query_engine.generate_response(
             query=request.text,
             documents=similar_docs
         )
+        
+        # Log the response size
+        logger.info(f"Returning {len(similar_docs)} documents with response")
         
         return SearchResponse(
             similar_documents=similar_docs,
@@ -147,4 +169,3 @@ async def search(request: SearchRequest):
             status_code=500,
             detail=f"Error processing search request: {str(e)}"
         )
-
