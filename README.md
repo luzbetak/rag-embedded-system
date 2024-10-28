@@ -2,141 +2,78 @@
 
 A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage and sentence-transformers for embeddings.
 
+------------------------------------------------------------------------------------------------------------------
+## Quick Start
 
-# 3-init-rag-db.py
-
-## RAG System Database Initialization Guide
-
-`3-init_rag_db.py` is the database initialization component for the RAG (Retrieval-Augmented Generation) system. It handles setting up MongoDB collections, loading documents, and generating embeddings for semantic search.
-
-## Database Configuration
-The system uses MongoDB with the following default settings:
-```python
-MONGODB_URI = "mongodb://localhost:27017"
-DATABASE_NAME = "rag_database"
-COLLECTION_NAME = "documents"
-```
-
-## Prerequisites
-1. MongoDB installed and running
-2. Python 3.7+
-3. Required Python packages:
-   ```bash
-   pip install pymongo sentence-transformers loguru numpy python-dotenv
-   ```
-
-## File Structure
-```
-project/
-├── 3-init_rag_db.py          # Main initialization script
-├── config.py               # Configuration settings
-├── database.py            # MongoDB connection handling
-├── data_ingestion.py      # Document processing pipeline
-├── vectorization.py       # Embedding generation
-└── data/
-    └── search-index.json  # Source documents
-```
-
-## Document Format
-Your `search-index.json` should follow this structure:
-```json
-[
-  {
-    "title": "Document Title",
-    "content": "Document Content",
-    "metadata": {
-      "key1": "value1",
-      "key2": "value2"
-    }
-  }
-]
-```
-
-## Script Components
-
-### 1. Database Initialization
-```python
-def init_database():
-    """
-    Initializes fresh MongoDB collection with required indices
-    - Drops existing collection if present
-    - Creates indices for 'title' and 'content'
-    """
-```
-
-### 2. Document Loading
-```python
-def load_documents():
-    """
-    Processes documents and generates embeddings
-    - Loads documents from search-index.json
-    - Preprocesses document text
-    - Generates embeddings using sentence-transformers
-    - Stores documents with embeddings in MongoDB
-    """
-```
-
-## Usage
-
-### Installation
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Start MongoDB:
-   ```bash
-   # Linux/MacOS
-   sudo service mongodb start
-   
-   ```
-
-### Running the Script
 ```bash
-python 3-init_rag_db.py
+# Install dependencies
+pip install spacy transformers torch networkx fastapi uvicorn loguru rich pymongo beautifulsoup4
+python -m spacy download en_core_web_sm
+
+# Process HTML files
+python 2-process-unstructured-html.py -s textrank
+
+# Initialize database
+python 4-init-rag-db.py
+
+# Option 1: API-based search
+./5-fastapi-uvicorn-server.sh
+python 6-api-rag-search.py
+
+# Option 2: Direct CLI search
+python 7-cli-rag-search.py
 ```
 
-The script provides three options:
-1. Initialize database (deletes existing data)
-2. Load documents from search-index.json
-3. Exit
+------------------------------------------------------------------------------------------------------------------
+## Files
 
-### First Time Setup
 ```bash
-python 3-init_rag_db.py
-# Choose option 1 to initialize database
-# Choose option 2 to load documents
+├── 2-process-unstructured-html.py   # Process HTML files and generate index
+├── 3-document_validator.py          # Validate and summarize documents
+├── 4-init-rag-db.py                # Initialize MongoDB and store documents
+├── 5-fastapi-uvicorn-server.sh     # Start FastAPI server
+├── 6-api-rag-search.py             # API-based search tool
+└── 7-cli-rag-search.py             # Direct CLI search tool
 ```
 
-### Updating Documents
-```bash
-# Choose option 2 to load new/updated documents
-```
+## Default Embedding Model all-MiniLM-L6-v2
+The all-MiniLM-L6-v2 is a lightweight and efficient transformer model that's popular for generating sentence embeddings. Here are its key characteristics:
 
-## Environment Variables
-The script uses these environment variables to optimize performance:
-```bash
-OPENBLAS_NUM_THREADS=1
-OPENBLAS_MAIN_FREE=1
-OMP_NUM_THREADS=1
-```
+## Architecture:
+Based on MiniLM architecture, which is a distilled version of larger transformer models
+6 layers (L6 in the name) making it quite compact
+Trained using knowledge distillation from larger models
 
+### Main strengths:
+Very fast inference speed due to its small size
+Good balance of performance vs computational requirements
+Produces 384-dimensional embeddings
+Works well for general-purpose sentence similarity tasks
 
-### MongoDB Installation
+### Compared to alternatives listed:
+Faster but slightly lower quality than all-mpnet-base-v2
+More general-purpose than multi-qa-MiniLM-L6-cos-v1 which is QA-specific
+English-only, unlike the multilingual variant
+Similar performance tier to all-distilroberta-v1 but typically faster
 
-#### Ubuntu
-```bash
-sudo apt-get update
-sudo apt-get install mongodb
-sudo systemctl start mongodb
-```
+### Best suited for:
+Production environments where speed is important
+Applications with resource constraints
+General semantic similarity tasks
+Cases where a good speed/performance trade-off is needed
 
-#### MacOS
-```bash
-brew tap mongodb/brew
-brew install mongodb-community
-brew services start mongodb-community
-```
+It's often considered a good default choice when you need reliable embeddings without excessive computational overhead. The model strikes a nice balance between efficiency and effectiveness for most common use cases.
+
+### Alternative Embedding Models
+
+- sentence-transformers/all-MiniLM-L6-v2
+- sentence-transformers/all-mpnet-base-v2                      # Better quality, slower
+- sentence-transformers/multi-qa-MiniLM-L6-cos-v1              # Optimized for QA
+- sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2  # Multilingual
+- sentence-transformers/all-distilroberta-v1                   # Good balance of speed/quality
+
+Summarization: TextRank (default), spaCy, BART
+
 
 ## Additional Notes
 
@@ -146,24 +83,14 @@ brew services start mongodb-community
 - MongoDB indices optimize search performance
 - Logging is handled by loguru for better debugging
 
-## Support
-For additional help or issues:
-1. Check MongoDB logs: `/var/log/mongodb/mongodb.log`
-2. Check RAG system logs: `pipeline.log`
-3. Ensure all dependencies are properly installed
-4. Verify MongoDB service is running
 
 ------------------------------------------------------------------------------------------------------------------
-## Install required packages
-```
-pip install spacy networkx numpy beautifulsoup4
-python -m spacy download en_core_web_sm
-
+## Process Unstructured HTML and Summarization
+```bash
 # Run with TextRank (default)
 python 2-process-unstructured-html.py
 
 # Run with basic summarization
-python 2-process-unstructured-html.py --method basic
 python 2-process-unstructured-html.py --summarize basic 
 python 2-process-unstructured-html.py --summarize textrank
 
@@ -171,8 +98,7 @@ python 2-process-unstructured-html.py --summarize textrank
 python 2-process-unstructured-html.py --debug
 ```
 ------------------------------------------------------------------------------------------------------------------
-
-## Document Summarization
+## Document Summarization Validation
 ```bash
 python -m spacy download en_core_web_sm
 
@@ -195,4 +121,4 @@ python document_validator.py --summarize spacy
 python document_validator.py --summarize transformers
 
 ```
-
+------------------------------------------------------------------------------------------------------------------
