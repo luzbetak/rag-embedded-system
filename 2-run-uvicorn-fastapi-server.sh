@@ -6,6 +6,8 @@ import webbrowser
 import threading
 import time
 
+# uvicorn query:app --reload
+
 def open_browser():
     """Open browser after a short delay"""
     time.sleep(2)
