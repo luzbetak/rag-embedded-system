@@ -56,19 +56,15 @@ def main():
         print("\nOptions:")
         print("1. Initialize database (will delete existing data)")
         print("2. Load documents from data/documents.json")
-        print("3. Do both (initialize and load)")
-        print("4. Exit")
+        print("3. Exit")
         
-        choice = input("\nEnter your choice (1-4): ")
+        choice = input("\nEnter your choice (1-3): ")
         
         if choice == '1':
             init_database()
         elif choice == '2':
             load_documents()
         elif choice == '3':
-            init_database()
-            load_documents()
-        elif choice == '4':
             print("\nExiting...")
             break
         else:

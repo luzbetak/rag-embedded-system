@@ -8,7 +8,7 @@ from database import Database
 class DataIngestionPipeline:
     def __init__(self):  # Remove db_url parameter
         self.db = Database()  # Use MongoDB Database class
-        logger.add("pipeline.log")
+        logger.add("logs/pipeline.log")
     
     def load_data(self, file_path: str) -> List[Dict[str, Any]]:
         """Load data from JSON or CSV files"""
