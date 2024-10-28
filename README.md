@@ -89,8 +89,6 @@ def load_documents():
    # Linux/MacOS
    sudo service mongodb start
    
-   # Windows
-   net start MongoDB
    ```
 
 ### Running the Script
