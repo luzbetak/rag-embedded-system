@@ -2,12 +2,13 @@
 
 A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage and sentence-transformers for embeddings.
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Quick Start
 
 ```bash
 # Install dependencies
-pip install spacy transformers torch networkx fastapi uvicorn loguru rich pymongo beautifulsoup4
+pip install spacy transformers torch networkx 
+pip install fastapi uvicorn loguru rich pymongo beautifulsoup4
 python -m spacy download en_core_web_sm
 
 # Process HTML files
@@ -24,7 +25,7 @@ python 6-api-rag-search.py
 python 7-cli-rag-search.py
 ```
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Files
 
 ```bash
@@ -83,7 +84,7 @@ Summarization: TextRank (default), spaCy, BART
 - Logging is handled by loguru for better debugging
 
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Process Unstructured HTML and Summarization
 ```bash
 # Run with TextRank (default)
@@ -96,7 +97,7 @@ python 2-process-unstructured-html.py --summarize textrank
 # Run with debug logging
 python 2-process-unstructured-html.py --debug
 ```
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Document Summarization Validation
 ```bash
 python -m spacy download en_core_web_sm
@@ -120,4 +121,4 @@ python document_validator.py --summarize spacy
 python document_validator.py --summarize transformers
 
 ```
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
