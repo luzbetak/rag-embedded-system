@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 import argparse
+from pymongo import MongoClient
+from datetime import datetime
+from json import JSONEncoder
 
 from bs4 import BeautifulSoup
 import spacy
@@ -20,20 +23,42 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+class DateTimeEncoder(JSONEncoder):
+    """Custom JSON encoder for datetime objects"""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 class IndexEntry:
     """Data class for storing content data"""
     def __init__(self, url: str, title: str, content: str):
         self.url = url
         self.title = title
         self.content = content
+        self.created_at = datetime.utcnow()
+        self.updated_at = datetime.utcnow()
+
+    def to_dict(self):
+        """Convert entry to dictionary with ISO format dates"""
+        return {
+            'url': self.url,
+            'title': self.title,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
 
 class TextSummarizer:
-    def __init__(self, output_dir: str = "data"):
-        """Initialize the text summarizer with spaCy NLP"""
-        # Convert output_dir to absolute path
+    def __init__(self, output_dir: str = "data", mongodb_uri: str = "mongodb://localhost:27017/"):
+        """Initialize the text summarizer with spaCy NLP and MongoDB connection"""
         self.output_dir = Path(output_dir).resolve()
         self.nlp = self._initialize_spacy()
+        self.mongo_client = MongoClient(mongodb_uri)
+        self.db = self.mongo_client.rag_database
+        self.collection = self.db.documents
         logger.info(f"Initialized TextSummarizer with output directory: {self.output_dir}")
+        logger.info(f"Connected to MongoDB database: {self.db.name}")
 
     def _initialize_spacy(self) -> Language:
         """Initialize spaCy with error handling"""
@@ -48,26 +73,21 @@ class TextSummarizer:
 
     @staticmethod
     def clean_text(text: str) -> str:
-        """Clean and normalize text, removing unwanted words for RAG retrieval"""
-        # Remove irrelevant terms for RAG (e.g., 'menu', 'html', 'title')
+        """Clean and normalize text"""
         text = re.sub(r'\b(menu|html|title|include)\b', '', text, flags=re.IGNORECASE)
-
-        # Remove special characters and multiple spaces
-        text = re.sub(r'[^\w\s-]', ' ', text)  # Remove special characters
-        text = re.sub(r'-+', ' ', text)        # Replace dashes with spaces
-        text = re.sub(r'\s+', ' ', text)       # Collapse multiple spaces
-
+        text = re.sub(r'[^\w\s-]', ' ', text)
+        text = re.sub(r'-+', ' ', text)
+        text = re.sub(r'\s+', ' ', text)
         return text.strip().lower()
 
     def summarize_text(self, text: str) -> str:
         """Summarize the text using spaCy"""
         doc = self.nlp(text)
-        sentences = [sent.text for sent in doc.sents]
-        # Return the first 3 sentences as a simple content (can be adjusted)
+        sentences = [sent.text.strip() for sent in doc.sents]
         return ' '.join(sentences[:3])
 
     def process_html_file(self, file_path: Path) -> Optional[IndexEntry]:
-        """Process a single HTML file and return a content"""
+        """Process a single HTML file and return a content entry"""
         try:
             logger.debug(f"Processing file: {file_path}")
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -81,43 +101,57 @@ class TextSummarizer:
                 body_text = soup.get_text(separator=' ', strip=True)
                 clean_body_text = self.clean_text(body_text)
 
-                # Skip if no meaningful content
                 if not clean_body_text:
                     logger.warning(f"Skipping {file_path}: No meaningful content")
                     return None
 
-                # Generate content
                 content = self.summarize_text(clean_body_text)
-
-                # Create URL path and ensure it's valid
                 relative_path = str(file_path.relative_to(Path.cwd()))
                 url_path = f"https://kevinluzbetak.com/{relative_path}"
 
-                entry = IndexEntry(
+                return IndexEntry(
                     url=url_path.strip(),
                     title=file_path.name,
                     content=content
                 )
-                logger.debug(f"Created entry for {file_path}")
-                return entry
 
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
             return None
 
+    def _write_to_mongodb(self, entries: List[IndexEntry]) -> None:
+        """Write entries to MongoDB"""
+        try:
+            # Convert entries to dictionaries
+            documents = [entry.to_dict() for entry in entries if entry and entry.url and entry.title and entry.content]
+            
+            if not documents:
+                logger.error("No valid entries to write to MongoDB!")
+                return
+
+            # Clear existing documents
+            self.collection.delete_many({})
+            
+            # Insert new documents
+            result = self.collection.insert_many(documents)
+            logger.info(f"Successfully inserted {len(result.inserted_ids)} documents into MongoDB")
+            
+            # Create text index for search
+            self.collection.create_index([("content", "text")])
+            logger.info("Created text index on content field")
+
+        except Exception as e:
+            logger.error(f"Error writing to MongoDB: {e}", exc_info=True)
+            raise
+
     def _write_index_file(self, entries: List[IndexEntry]) -> None:
         """Write the summaries to a JSON file"""
         try:
-            # Create output directory if it doesn't exist
             self.output_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Ensuring output directory exists: {self.output_dir}")
-
             output_file = self.output_dir / "search-index.json"
-            logger.info(f"Writing to output file: {output_file}")
-
-            # Final validation
+            
             valid_entries = [
-                vars(entry) for entry in entries
+                entry.to_dict() for entry in entries
                 if entry and entry.url and entry.title and entry.content
             ]
 
@@ -126,7 +160,7 @@ class TextSummarizer:
                 return
 
             with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(valid_entries, f, indent=2, ensure_ascii=False)
+                json.dump(valid_entries, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
             logger.info(f"Successfully created {output_file} with {len(valid_entries)} entries")
 
         except Exception as e:
@@ -137,11 +171,9 @@ class TextSummarizer:
         """Generate the content index from HTML files"""
         logger.info("Starting content index generation...")
 
-        # Get absolute path of current directory
         current_dir = Path.cwd()
         logger.info(f"Current working directory: {current_dir}")
 
-        # Collect HTML files
         html_files = [
             p for p in current_dir.rglob("*.html")
             if p.name != "index.html" and not str(p).startswith(str(self.output_dir))
@@ -154,7 +186,6 @@ class TextSummarizer:
         logger.info(f"Found {len(html_files)} HTML files to process")
         logger.debug(f"Files to process: {[str(f) for f in html_files]}")
 
-        # Process files in parallel
         with ThreadPoolExecutor() as executor:
             entries = list(filter(None, executor.map(
                 self.process_html_file,
@@ -167,10 +198,16 @@ class TextSummarizer:
 
         logger.info(f"Generated {len(entries)} valid entries")
 
-        # Write summaries to JSON file
+        # Write to both MongoDB and JSON file
+        self._write_to_mongodb(entries)
         self._write_index_file(entries)
 
-        logger.info("Summary index generation completed")
+        logger.info("Index generation completed")
+
+    def __del__(self):
+        """Cleanup MongoDB connection"""
+        if hasattr(self, 'mongo_client'):
+            self.mongo_client.close()
 
 def main():
     """Main entry point"""
@@ -184,6 +221,11 @@ def main():
         help="Output directory for the content index"
     )
     parser.add_argument(
+        "--mongodb-uri",
+        default="mongodb://localhost:27017/",
+        help="MongoDB connection URI"
+    )
+    parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug logging"
@@ -195,7 +237,7 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     try:
-        summarizer = TextSummarizer(args.output_dir)
+        summarizer = TextSummarizer(args.output_dir, args.mongodb_uri)
         summarizer.generate_index()
     except Exception as e:
         logger.error(f"Failed to generate content index: {e}", exc_info=True)
