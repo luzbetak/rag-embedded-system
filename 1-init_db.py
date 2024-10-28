@@ -7,6 +7,8 @@ from loguru import logger
 import json
 import os
 
+search_index = 'data/search-index.json'
+
 def init_database():
     logger.info("Initializing database...")
     
@@ -32,12 +34,12 @@ def load_documents():
     vectorization_pipeline = VectorizationPipeline()
     
     # Check if documents.json exists
-    if not os.path.exists("data/documents.json"):
-        logger.error("data/documents.json not found!")
+    if not os.path.exists(search_index):
+        logger.error(f"{search_index} not found!")
         return
     
     # Load and process documents
-    documents = data_pipeline.load_data("data/documents.json")
+    documents = data_pipeline.load_data(search_index)
     processed_docs = data_pipeline.preprocess_data(documents)
     
     # Generate embeddings and store documents
