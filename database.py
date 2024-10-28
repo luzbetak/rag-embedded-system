@@ -2,106 +2,152 @@
 
 from pymongo import MongoClient, ReplaceOne
 from loguru import logger
+import numpy as np
 
 class Database:
     def __init__(self):
-        # Initialize MongoDB client and connect to the database
-        self.client = MongoClient("mongodb://localhost:27017/")
-        self.db = self.client['rag_database']
-        self.collection = self.db['documents']
-        logger.info("Initialized MongoDB database connection")
+        """Initialize MongoDB client and connect to the database"""
+        try:
+            # Connect with explicit database name
+            self.client = MongoClient("mongodb://localhost:27017/")
+            
+            # Use 'rag_database' explicitly
+            self.db = self.client.rag_database
+            self.collection = self.db.documents
+            
+            # Test connection
+            self.client.server_info()
+            
+            # Create indices if they don't exist
+            self.collection.create_index([("url", 1)], unique=True)
+            self.collection.create_index([("title", 1)])
+            self.collection.create_index([("content", 1)])
+            
+            logger.info(f"Connected to MongoDB - Database: {self.db.name}, Collection: {self.collection.name}")
+            
+            # Log current document count
+            count = self.collection.count_documents({})
+            logger.info(f"Current document count: {count}")
+            
+        except Exception as e:
+            logger.error(f"Database connection error: {e}")
+            raise
+
+    def get_similar_documents(self, query_embedding, top_k=5):
+        """Find similar documents using vector similarity search"""
+        try:
+            # Ensure query_embedding is a list
+            if isinstance(query_embedding, np.ndarray):
+                query_embedding = query_embedding.tolist()
+
+            # Modified aggregation pipeline to handle array multiplication properly
+            pipeline = [
+                {
+                    "$set": {
+                        "similarity": {
+                            "$let": {
+                                "vars": {
+                                    "dot_product": {
+                                        "$reduce": {
+                                            "input": {"$range": [0, {"$size": "$embedding"}]},
+                                            "initialValue": 0,
+                                            "in": {
+                                                "$add": [
+                                                    "$$value",
+                                                    {
+                                                        "$multiply": [
+                                                            {"$arrayElemAt": ["$embedding", "$$this"]},
+                                                            {"$arrayElemAt": [query_embedding, "$$this"]}
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                },
+                                "in": "$$dot_product"
+                            }
+                        }
+                    }
+                },
+                {"$sort": {"similarity": -1}},
+                {"$limit": top_k},
+                {
+                    "$project": {
+                        "_id": 0,
+                        "title": 1,
+                        "content": 1,
+                        "url": 1,
+                        "score": "$similarity"
+                    }
+                }
+            ]
+
+            results = list(self.collection.aggregate(pipeline))
+            logger.info(f"Found {len(results)} similar documents")
+            
+            # Log similarity scores for debugging
+            if results:
+                logger.debug("Top similarity scores:")
+                for i, doc in enumerate(results[:3], 1):
+                    logger.debug(f"Doc {i}: {doc.get('score', 0):.3f}")
+            
+            return results
+
+        except Exception as e:
+            logger.error(f"Error finding similar documents: {e}")
+            return []
 
     def batch_store_documents(self, documents, embeddings):
-        docs_to_insert = []
-        # Combine documents with their corresponding embeddings
-        for doc, embedding in zip(documents, embeddings):
-            # Ensure the document has required fields (url, title, and content)
-            if doc.get('url') and doc.get('title') and doc.get('content'):
-                doc_to_insert = {
-                    'url': doc['url'],
-                    'title': doc['title'],
-                    'content': doc['content'],
-                    'embedding': embedding
-                }
-                docs_to_insert.append(doc_to_insert)
-
-        # Check if there are valid documents to insert
-        if not docs_to_insert:
-            logger.warning("No valid documents to insert")
+        """Store multiple documents with their embeddings"""
+        if not documents or not embeddings:
+            logger.error("No documents or embeddings to store")
             return
 
-        # Prepare the bulk write operations with upsert
-        operations = [
-            {
-                'replaceOne': {
-                    'filter': {'url': doc['url']},
-                    'replacement': doc,
-                    'upsert': True
-                }
-            }
-            for doc in docs_to_insert
-        ]
+        operations = []
+        for doc, embedding in zip(documents, embeddings):
+            if not all(key in doc for key in ["url", "title", "content"]):
+                logger.warning(f"Skipping document missing required fields: {doc}")
+                continue
 
-        try:
-            # Perform the bulk write operation
-            result = self.collection.bulk_write(operations)
-            logger.info(f"Processed {len(docs_to_insert)} documents. "
-                        f"Inserted: {result.upserted_count}, "
-                        f"Modified: {result.modified_count}")
-        except Exception as e:
-            logger.error(f"Error batch storing documents: {e}")
+            # Ensure embedding is a list
+            if isinstance(embedding, np.ndarray):
+                embedding = embedding.tolist()
 
+            operations.append(
+                ReplaceOne(
+                    {"url": doc["url"]},
+                    {
+                        "url": doc["url"],
+                        "title": doc["title"],
+                        "content": doc["content"],
+                        "embedding": embedding
+                    },
+                    upsert=True
+                )
+            )
 
-def load_documents():
-    from vectorization import VectorizationPipeline
-    from data_ingestion import load_data, preprocess_data
+        if operations:
+            try:
+                result = self.collection.bulk_write(operations)
+                logger.info(f"Bulk write completed successfully")
+                logger.info(f"Documents processed: {len(operations)}")
+                logger.info(f"Documents inserted: {result.upserted_count}")
+                logger.info(f"Documents modified: {result.modified_count}")
+                
+                # Verify storage
+                count = self.collection.count_documents({})
+                logger.info(f"Total documents in collection: {count}")
+                
+                return result
+            except Exception as e:
+                logger.error(f"Error storing documents: {e}")
+                raise
 
-    # Initialize database and vectorization pipeline
-    db = Database()
-    vectorization_pipeline = VectorizationPipeline()
+    def close(self):
+        """Close the database connection"""
+        if hasattr(self, 'client'):
+            self.client.close()
+            logger.info("Database connection closed")
 
-    # Load and preprocess data
-    logger.info("Loading and processing documents...")
-    processed_docs = preprocess_data(load_data("data/search-index.json"))
-
-    # Generate embeddings for the processed documents
-    embeddings = vectorization_pipeline.generate_embeddings([doc["content"] for doc in processed_docs])
-
-    # Store the documents and embeddings in the database
-    db.batch_store_documents(processed_docs, embeddings)
-
-
-def init_database():
-    # Initialize the MongoDB database (deletes old data and creates new indices)
-    logger.info("Initializing database...")
-    db = Database()
-    
-    # Drop the existing collection if it exists
-    logger.info("Dropping existing collection...")
-    db.collection.drop()
-    
-    # Create indices on the 'url' field
-    logger.info("Creating indices...")
-    db.collection.create_index("url", unique=True)
-
-    logger.info("Database initialized successfully!")
-
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser(description="RAG System Database Initialization")
-    parser.add_argument('--init', action='store_true', help='Initialize the database (will delete existing data)')
-    parser.add_argument('--load', action='store_true', help='Load documents from data/search-index.json')
-    args = parser.parse_args()
-
-    if args.init:
-        init_database()
-
-    if args.load:
-        load_documents()
-
-
-if __name__ == "__main__":
-    main()
 
