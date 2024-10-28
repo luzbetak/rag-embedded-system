@@ -7,14 +7,16 @@ A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage
 
 ```bash
 # Install dependencies
-pip install spacy transformers torch networkx 
-pip install fastapi uvicorn loguru rich pymongo beautifulsoup4
+pip install spacy transformers torch networkx fastapi
+pip install uvicorn loguru rich pymongo beautifulsoup4
 python -m spacy download en_core_web_sm
 
 # Process HTML files
 python 2-process-unstructured-html.py -s textrank
 
-# Initialize database
+# Initialize database (will delete existing data)
+# Load documents from data/search-index.json
+# Show document count
 python 4-init-rag-db.py
 
 # Option 1: API-based search
@@ -29,15 +31,20 @@ python 7-cli-rag-search.py
 ## Files
 
 ```bash
-├── 1-ai                             # Directory with unstructured HTML files  
-├── 2-process-unstructured-html.py   # Process HTML files and generate index
-├── 3-document_validator.py          # Validate and summarize documents
-├── 4-init-rag-db.py                 # Initialize MongoDB and store documents
-├── 5-fastapi-uvicorn-server.sh      # Start FastAPI server
-├── 6-api-rag-search.py              # API-based search tool
-└── 7-cli-rag-search.py              # Direct CLI search tool
+├── 1-ai/                           # Directory with unstructured HTML files
+├── 2-process-unstructured-html.py  # Process HTML files and generate index
+├── 3-document_validator.py         # Validate and summarize documents
+├── 4-init-rag-db.py                # Initialize MongoDB and store documents
+├── 5-fastapi-uvicorn-server.sh     # Start FastAPI server
+├── 6-api-rag-search.py             # API-based search tool
+└── 7-cli-rag-search.py             # Direct CLI search tool
+├── database.py                     # MongoDB database interactions
+├── query.py                        # Search and retrieval engine
+├── vectorization.py                # Handles document embedding
+├── config.py                       # System configuration
 ```
 
+-----------------------------------------------------------------------------------------------------
 ## Default Embedding Model:
 The all-MiniLM-L6-v2 is a lightweight and efficient transformer model that's popular for generating sentence embeddings. Here are its key characteristics:
 
