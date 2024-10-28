@@ -89,8 +89,6 @@ def load_documents():
    # Linux/MacOS
    sudo service mongodb start
    
-   # Windows
-   net start MongoDB
    ```
 
 ### Running the Script
@@ -155,6 +153,23 @@ For additional help or issues:
 3. Ensure all dependencies are properly installed
 4. Verify MongoDB service is running
 
+------------------------------------------------------------------------------------------------------------------
+## Install required packages
+```
+pip install spacy networkx numpy beautifulsoup4
+python -m spacy download en_core_web_sm
+
+# Run with TextRank (default)
+python 2-process-unstructured-html.py
+
+# Run with basic summarization
+python 2-process-unstructured-html.py --method basic
+python 2-process-unstructured-html.py --summarize basic 
+python 2-process-unstructured-html.py --summarize textrank
+
+# Run with debug logging
+python 2-process-unstructured-html.py --debug
+```
 ------------------------------------------------------------------------------------------------------------------
 
 ## Document Summarization

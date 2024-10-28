@@ -167,6 +167,13 @@ def main():
         default="data",
         help="Output directory for the content index"
     )
+    # Add the summarization method argument
+    parser.add_argument(
+        "--summarize", "-s",
+        choices=["basic", "textrank"],
+        default="textrank",
+        help="Summarization method to use"
+    )
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -179,13 +186,10 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     try:
-        summarizer = TextSummarizer(args.output_dir)
+        # Pass the summarization method to TextSummarizer
+        summarizer = TextSummarizer(args.output_dir, summarization_method=args.summarize)
         summarizer.generate_index()
     except Exception as e:
         logger.error(f"Failed to generate content index: {e}")
         exit(1)
-
-if __name__ == "__main__":
-    main()
-
 
