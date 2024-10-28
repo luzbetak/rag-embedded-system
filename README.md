@@ -156,3 +156,28 @@ For additional help or issues:
 4. Verify MongoDB service is running
 
 ------------------------------------------------------------------------------------------------------------------
+
+## Document Summarization
+```bash
+python -m spacy download en_core_web_sm
+
+# Basic usage
+python document_validator.py
+
+# With specific input/output files
+python document_validator.py -i input.json -o output.json
+
+# Debug mode
+python document_validator.py --debug
+
+# Basic summarization (default)
+python document_validator.py
+
+
+# Using different summarization methods
+python document_validator.py --summarize textrank
+python document_validator.py --summarize spacy
+python document_validator.py --summarize transformers
+
+```
+
