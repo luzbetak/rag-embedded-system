@@ -154,6 +154,23 @@ For additional help or issues:
 4. Verify MongoDB service is running
 
 ------------------------------------------------------------------------------------------------------------------
+## Install required packages
+```
+pip install spacy networkx numpy beautifulsoup4
+python -m spacy download en_core_web_sm
+
+# Run with TextRank (default)
+python 2-process-unstructured-html.py
+
+# Run with basic summarization
+python 2-process-unstructured-html.py --method basic
+python 2-process-unstructured-html.py --summarize basic 
+python 2-process-unstructured-html.py --summarize textrank
+
+# Run with debug logging
+python 2-process-unstructured-html.py --debug
+```
+------------------------------------------------------------------------------------------------------------------
 
 ## Document Summarization
 ```bash
