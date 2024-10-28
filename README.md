@@ -1,5 +1,5 @@
-Retrieval-Augmented Generation (RAG)
-====================================
+Retrieval-Augmented Generation (RAG) by Kevin Luzbetak
+======================================================
 
 RAG system using MongoDB for document storage and sentence-transformers for embeddings.
 
