@@ -38,11 +38,12 @@ python 7-cli-rag-search.py
 ├── 4-init-rag-db.py                # Initialize MongoDB and store documents
 ├── 5-fastapi-uvicorn-server.sh     # Start FastAPI server
 ├── 6-api-rag-search.py             # API-based search tool
-└── 7-cli-rag-search.py             # Direct CLI search tool
+├── 7-cli-rag-search.py             # Direct CLI search tool
 ├── database.py                     # MongoDB database interactions
 ├── query.py                        # Search and retrieval engine
 ├── vectorization.py                # Handles document embedding
-├── config.py                       # System configuration
+├── data_ingestion.py               # Data loading and preprocessing pipeline
+└── config.py                       # System configuration
 ```
 
 -----------------------------------------------------------------------------------------------------
