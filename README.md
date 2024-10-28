@@ -1,210 +1,164 @@
-# Embedded RAG System
+# RAG System
 
 A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage and sentence-transformers for embeddings.
 
-## Prerequisites
 
-- Ubuntu/Linux system
-- Anaconda/Miniconda
-- Python 3.11
-- MongoDB
+# 3-init-rag-db.py
 
-## Installation Steps
+## RAG System Database Initialization Guide
 
-### 1. MongoDB Installation
+`3-init_rag_db.py` is the database initialization component for the RAG (Retrieval-Augmented Generation) system. It handles setting up MongoDB collections, loading documents, and generating embeddings for semantic search.
 
-```bash
-# Import MongoDB public GPG key
-curl -fsSL https://pgp.mongodb.com/server-7.0.asc | \
-   sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
-   --dearmor
-
-# Create list file for MongoDB
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-
-# Reload local package database
-sudo apt-get update
-
-# Install MongoDB packages
-sudo apt-get install -y mongodb-org
-
-# Start MongoDB
-sudo systemctl start mongod
-
-# Enable MongoDB to start on boot
-sudo systemctl enable mongod
-
-# Verify MongoDB is running
-sudo systemctl status mongod
-```
-
-### 2. Create Conda Environment
-
-```bash
-# Create new environment
-conda create -n rag python=3.11
-
-# Activate environment
-conda activate rag
-
-# Install required packages
-conda install -c conda-forge pandas sqlalchemy sentence-transformers fastapi uvicorn python-dotenv loguru numpy pymongo jupyter
-```
-
-### 3. Project Setup
-
-```bash
-# Clone or create project directory
-mkdir embedded-rag-system
-cd embedded-rag-system
-
-# Create required directories
-mkdir -p data logs
-```
-
-### 4. Initialize MongoDB Database and Collection
-
+## Database Configuration
+The system uses MongoDB with the following default settings:
 ```python
-# Run Python in your rag environment
-python
-
-# In Python console:
-from database import Database
-db = Database()
-db.collection.drop()  # If you need to reset the database
+MONGODB_URI = "mongodb://localhost:27017"
+DATABASE_NAME = "rag_database"
+COLLECTION_NAME = "documents"
 ```
 
-### 5. Prepare Test Documents
+## Prerequisites
+1. MongoDB installed and running
+2. Python 3.7+
+3. Required Python packages:
+   ```bash
+   pip install pymongo sentence-transformers loguru numpy python-dotenv
+   ```
 
-Create a file `data/documents.json` with some test documents:
+## File Structure
+```
+project/
+├── 3-init_rag_db.py          # Main initialization script
+├── config.py               # Configuration settings
+├── database.py            # MongoDB connection handling
+├── data_ingestion.py      # Document processing pipeline
+├── vectorization.py       # Embedding generation
+└── data/
+    └── search-index.json  # Source documents
+```
 
+## Document Format
+Your `search-index.json` should follow this structure:
 ```json
 [
-    {
-        "title": "Test Document 1",
-        "content": "This is a test document for the RAG system.",
-        "metadata": {
-            "author": "Test Author",
-            "date": "2024-10-27"
-        }
-    },
-    {
-        "title": "Test Document 2",
-        "content": "Another test document to verify the pipeline.",
-        "metadata": {
-            "author": "Test Author 2",
-            "date": "2024-10-27"
-        }
+  {
+    "title": "Document Title",
+    "content": "Document Content",
+    "metadata": {
+      "key1": "value1",
+      "key2": "value2"
     }
+  }
 ]
 ```
 
-### 6. File Structure
+## Script Components
 
-Ensure you have all the required Python files:
-
-```
-embedded-rag-system/
-├── config.py           # Configuration settings
-├── database.py        # Database operations
-├── data_ingestion.py  # Data loading and preprocessing
-├── vectorization.py   # Embedding generation
-├── query.py           # Search and retrieval
-├── main.py           # Main pipeline script
-├── search.py         # Search interface
-├── data/             # Document storage
-│   └── documents.json
-└── logs/             # Log files
-    └── pipeline.log
+### 1. Database Initialization
+```python
+def init_database():
+    """
+    Initializes fresh MongoDB collection with required indices
+    - Drops existing collection if present
+    - Creates indices for 'title' and 'content'
+    """
 ```
 
-### 7. Run the Pipeline
-
-```bash
-# Make sure you're in the rag environment
-conda activate rag
-
-# Run the main pipeline to process documents
-python main.py
-```
-
-### 8. Search Documents
-
-```bash
-# Run the search interface
-python search.py
+### 2. Document Loading
+```python
+def load_documents():
+    """
+    Processes documents and generates embeddings
+    - Loads documents from search-index.json
+    - Preprocesses document text
+    - Generates embeddings using sentence-transformers
+    - Stores documents with embeddings in MongoDB
+    """
 ```
 
 ## Usage
 
-1. To add new documents:
-   - Add them to `data/documents.json`
-   - Run `main.py` to process them
-
-2. To search documents:
-   - Run `search.py`
-   - Choose option 1 to search
-   - Enter your query
-   - View results
-
-3. To reset the system:
-   ```python
-   from database import Database
-   db = Database()
-   db.collection.drop()
-   ```
-   Then run `main.py` again to reload documents.
-
-## Troubleshooting
-
-1. If MongoDB isn't running:
+### Installation
+1. Clone the repository
+2. Install dependencies:
    ```bash
-   sudo systemctl start mongod
-   sudo systemctl status mongod
+   pip install -r requirements.txt
    ```
-
-2. To check MongoDB logs:
+3. Start MongoDB:
    ```bash
-   sudo tail -f /var/log/mongodb/mongod.log
+   # Linux/MacOS
+   sudo service mongodb start
+   
+   # Windows
+   net start MongoDB
    ```
 
-3. To verify database contents:
-   ```python
-   from database import Database
-   db = Database()
-   list(db.collection.find({}, {'embedding': 0}))  # View documents without embeddings
-   ```
+### Running the Script
+```bash
+python 3-init_rag_db.py
+```
 
-## Project Components
+The script provides three options:
+1. Initialize database (deletes existing data)
+2. Load documents from search-index.json
+3. Exit
 
-- `config.py`: Configuration settings for MongoDB and model parameters
-- `database.py`: MongoDB database operations and similarity search
-- `data_ingestion.py`: Document loading and preprocessing
-- `vectorization.py`: Document embedding generation
-- `query.py`: Search functionality and API
-- `main.py`: Main pipeline execution
-- `search.py`: Interactive search interface
+### First Time Setup
+```bash
+python 3-init_rag_db.py
+# Choose option 1 to initialize database
+# Choose option 2 to load documents
+```
 
-## Notes
+### Updating Documents
+```bash
+# Choose option 2 to load new/updated documents
+```
 
-- The system uses sentence-transformers for generating embeddings
-- Documents are stored in MongoDB with their embeddings
-- Similarity search is performed using cosine similarity
-- Duplicate documents are automatically handled
-- The system maintains logs in the `logs` directory
-
-## Future Improvements
-
-- Add support for more document formats
-- Implement better text preprocessing
-- Add filtering options in search
-- Add batch processing for large document sets
-- Implement document updating functionality
+## Environment Variables
+The script uses these environment variables to optimize performance:
+```bash
+OPENBLAS_NUM_THREADS=1
+OPENBLAS_MAIN_FREE=1
+OMP_NUM_THREADS=1
+```
 
 
+### MongoDB Installation
 
-Would you like me to:
-1. Add more details to any section?
-2. Add configuration examples?
-3. Add more troubleshooting steps?
-4. Add example code for common tasks?# embedded-rag-system
+#### Ubuntu
+```bash
+sudo apt-get update
+sudo apt-get install mongodb
+sudo systemctl start mongodb
+```
+
+#### MacOS
+```bash
+brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community
+```
+
+#### Windows
+1. Download MongoDB Community Server from MongoDB website
+2. Run the installer
+3. Add MongoDB to system PATH
+4. Create data directory: `C:\data\db`
+
+## Additional Notes
+
+- The script uses sentence-transformers for generating embeddings
+- Default model: 'sentence-transformers/all-MiniLM-L6-v2'
+- Embedding dimension: 384
+- MongoDB indices optimize search performance
+- Logging is handled by loguru for better debugging
+
+## Support
+For additional help or issues:
+1. Check MongoDB logs: `/var/log/mongodb/mongodb.log`
+2. Check RAG system logs: `pipeline.log`
+3. Ensure all dependencies are properly installed
+4. Verify MongoDB service is running
+
+------------------------------------------------------------------------------------------------------------------
