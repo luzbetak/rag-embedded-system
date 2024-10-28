@@ -1,128 +1,107 @@
 #!/usr/bin/env python3
 
-from typing import List, Dict, Any
-from pymongo import MongoClient
-import numpy as np
-from config import Config
+from pymongo import MongoClient, ReplaceOne
 from loguru import logger
 
 class Database:
     def __init__(self):
-        self.client = MongoClient(Config.MONGODB_URI)
-        self.db = self.client[Config.DATABASE_NAME]
-        self.collection = self.db[Config.COLLECTION_NAME]
+        # Initialize MongoDB client and connect to the database
+        self.client = MongoClient("mongodb://localhost:27017/")
+        self.db = self.client['rag_database']
+        self.collection = self.db['documents']
         logger.info("Initialized MongoDB database connection")
 
-    def store_document(self, doc: Dict[str, Any], embedding: List[float] = None):
-        """Store a single document with its embedding"""
-        try:
-            # Validate required fields
-            if not doc.get('url'):
-                logger.error("Skipping document: Missing URL")
-                return
-                
-            document = {
-                "url": doc['url'].strip(),  # Primary key
-                "title": doc.get('title', '').strip(),
-                "content": doc.get('content', '').strip(),
-                "embedding": embedding
+    def batch_store_documents(self, documents, embeddings):
+        docs_to_insert = []
+        # Combine documents with their corresponding embeddings
+        for doc, embedding in zip(documents, embeddings):
+            # Ensure the document has required fields (url, title, and content)
+            if doc.get('url') and doc.get('title') and doc.get('content'):
+                doc_to_insert = {
+                    'url': doc['url'],
+                    'title': doc['title'],
+                    'content': doc['content'],
+                    'embedding': embedding
+                }
+                docs_to_insert.append(doc_to_insert)
+
+        # Check if there are valid documents to insert
+        if not docs_to_insert:
+            logger.warning("No valid documents to insert")
+            return
+
+        # Prepare the bulk write operations with upsert
+        operations = [
+            {
+                'replaceOne': {
+                    'filter': {'url': doc['url']},
+                    'replacement': doc,
+                    'upsert': True
+                }
             }
-            
-            # Use upsert to handle duplicates
-            result = self.collection.update_one(
-                {"url": document["url"]},  # Query by URL
-                {"$set": document},        # Update/insert document
-                upsert=True                # Create if doesn't exist
-            )
-            
-            logger.info(f"{'Updated' if result.matched_count else 'Inserted'} document with URL: {document['url']}")
-            return result
+            for doc in docs_to_insert
+        ]
 
-        except Exception as e:
-            logger.error(f"Error storing document: {str(e)}")
-            raise
-
-    def batch_store_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]] = None):
-        """Store multiple documents with their embeddings"""
         try:
-            docs_to_insert = []
-            for idx, doc in enumerate(documents):
-                # Skip documents without URL
-                if not doc.get('url'):
-                    logger.warning(f"Skipping document at index {idx}: Missing URL")
-                    continue
-                    
-                embedding = embeddings[idx] if embeddings else None
-                
-                document = {
-                    "url": doc['url'].strip(),
-                    "title": doc.get('title', '').strip(),
-                    "content": doc.get('content', '').strip(),
-                    "embedding": embedding
-                }
-                docs_to_insert.append(document)
-
-            if not docs_to_insert:
-                logger.warning("No valid documents to insert")
-                return
-
-            # Use bulk write with upsert operations
-            operations = [
-                {
-                    'replaceOne': {
-                        'filter': {'url': doc['url']},
-                        'replacement': doc,
-                        'upsert': True
-                    }
-                }
-                for doc in docs_to_insert
-            ]
-            
+            # Perform the bulk write operation
             result = self.collection.bulk_write(operations)
             logger.info(f"Processed {len(docs_to_insert)} documents. "
-                       f"Inserted: {result.upserted_count}, "
-                       f"Modified: {result.modified_count}")
-
+                        f"Inserted: {result.upserted_count}, "
+                        f"Modified: {result.modified_count}")
         except Exception as e:
-            logger.error(f"Error batch storing documents: {str(e)}")
-            raise
+            logger.error(f"Error batch storing documents: {e}")
 
-    def get_similar_documents(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
-        """Find similar documents using cosine similarity"""
-        try:
-            # Get all documents with embeddings
-            documents = list(self.collection.find(
-                {"embedding": {"$exists": True}},
-                {'_id': 0}
-            ))
-            
-            results = []
-            query_embedding = np.array(query_embedding)
-            
-            for doc in documents:
-                doc_embedding = doc.pop('embedding', None)
-                if doc_embedding is not None:
-                    similarity = np.dot(query_embedding, doc_embedding) / (
-                        np.linalg.norm(query_embedding) * np.linalg.norm(doc_embedding)
-                    )
-                    doc['score'] = float(similarity)
-                else:
-                    doc['score'] = 0.0
-                results.append(doc)
-            
-            # Sort by similarity score
-            results.sort(key=lambda x: x['score'], reverse=True)
-            return results[:top_k]
-                
-        except Exception as e:
-            logger.error(f"Error in similarity search: {str(e)}")
-            return []
 
-    def clear_collection(self):
-        """Clear all documents from the collection"""
-        try:
-            result = self.collection.delete_many({})
-            logger.info(f"Cleared {result.deleted_count} documents from collection")
-        except Exception as e:
-            logger.error(f"Error clearing collection: {str(e)}")
-            raise
+def load_documents():
+    from vectorization import VectorizationPipeline
+    from data_ingestion import load_data, preprocess_data
+
+    # Initialize database and vectorization pipeline
+    db = Database()
+    vectorization_pipeline = VectorizationPipeline()
+
+    # Load and preprocess data
+    logger.info("Loading and processing documents...")
+    processed_docs = preprocess_data(load_data("data/search-index.json"))
+
+    # Generate embeddings for the processed documents
+    embeddings = vectorization_pipeline.generate_embeddings([doc["content"] for doc in processed_docs])
+
+    # Store the documents and embeddings in the database
+    db.batch_store_documents(processed_docs, embeddings)
+
+
+def init_database():
+    # Initialize the MongoDB database (deletes old data and creates new indices)
+    logger.info("Initializing database...")
+    db = Database()
+    
+    # Drop the existing collection if it exists
+    logger.info("Dropping existing collection...")
+    db.collection.drop()
+    
+    # Create indices on the 'url' field
+    logger.info("Creating indices...")
+    db.collection.create_index("url", unique=True)
+
+    logger.info("Database initialized successfully!")
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="RAG System Database Initialization")
+    parser.add_argument('--init', action='store_true', help='Initialize the database (will delete existing data)')
+    parser.add_argument('--load', action='store_true', help='Load documents from data/search-index.json')
+    args = parser.parse_args()
+
+    if args.init:
+        init_database()
+
+    if args.load:
+        load_documents()
+
+
+if __name__ == "__main__":
+    main()
+

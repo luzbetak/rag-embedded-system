@@ -21,11 +21,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class IndexEntry:
-    """Data class for storing summary data"""
-    def __init__(self, url: str, title: str, summary: str):
+    """Data class for storing content data"""
+    def __init__(self, url: str, title: str, content: str):
         self.url = url
         self.title = title
-        self.summary = summary
+        self.content = content
 
 class TextSummarizer:
     def __init__(self, output_dir: str = "data"):
@@ -62,11 +62,11 @@ class TextSummarizer:
         """Summarize the text using spaCy"""
         doc = self.nlp(text)
         sentences = [sent.text for sent in doc.sents]
-        # Return the first 3 sentences as a simple summary (can be adjusted)
+        # Return the first 3 sentences as a simple content (can be adjusted)
         return ' '.join(sentences[:3])
 
     def process_html_file(self, file_path: Path) -> Optional[IndexEntry]:
-        """Process a single HTML file and return a summary"""
+        """Process a single HTML file and return a content"""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 soup = BeautifulSoup(f, 'html.parser')
@@ -84,8 +84,8 @@ class TextSummarizer:
                     logger.warning(f"Skipping {file_path}: No meaningful content")
                     return None
 
-                # Generate summary
-                summary = self.summarize_text(clean_body_text)
+                # Generate content
+                content = self.summarize_text(clean_body_text)
 
                 # Create URL path and ensure it's valid
                 relative_path = str(file_path.relative_to(Path.cwd()))
@@ -94,7 +94,7 @@ class TextSummarizer:
                 return IndexEntry(
                     url=url_path.strip(),
                     title=file_path.name,
-                    summary=summary
+                    content=content
                 )
 
         except Exception as e:
@@ -109,7 +109,7 @@ class TextSummarizer:
         # Final validation
         valid_entries = [
             vars(entry) for entry in entries
-            if entry.url and entry.title and entry.summary
+            if entry.url and entry.title and entry.content
         ]
 
         if not valid_entries:
@@ -125,8 +125,8 @@ class TextSummarizer:
             raise
 
     def generate_index(self) -> None:
-        """Generate the summary index from HTML files"""
-        logger.info("Starting summary index generation...")
+        """Generate the content index from HTML files"""
+        logger.info("Starting content index generation...")
 
         # Collect HTML files
         html_files = [
@@ -159,13 +159,13 @@ class TextSummarizer:
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
-        description="Generate summary index from HTML files",
+        description="Generate content index from HTML files",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "--output-dir",
         default="data",
-        help="Output directory for the summary index"
+        help="Output directory for the content index"
     )
     parser.add_argument(
         "--debug",
@@ -182,9 +182,10 @@ def main():
         summarizer = TextSummarizer(args.output_dir)
         summarizer.generate_index()
     except Exception as e:
-        logger.error(f"Failed to generate summary index: {e}")
+        logger.error(f"Failed to generate content index: {e}")
         exit(1)
 
 if __name__ == "__main__":
     main()
+
 

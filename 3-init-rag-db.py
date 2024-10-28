@@ -54,7 +54,7 @@ def load_documents():
     # Store documents with embeddings in the database
     batch_store_documents(processed_docs, embeddings)
 
-    # Print summary
+    # Print content
     logger.info(f"Processed {len(processed_docs)} documents")
 
 def batch_store_documents(documents, embeddings):
@@ -111,4 +111,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
