@@ -25,7 +25,7 @@ install_deps() {
     echo -e "${BLUE}Installing dependencies...${NC}"
     
     echo "Installing core dependencies..."
-    conda install -c conda-forge pandas sqlalchemy sentence-transformers fastapi uvicorn python-dotenv loguru numpy pymongo -y
+    conda install -c conda-forge pandas sqlalchemy sentence-transformers fastapi uvicorn python-dotenv loguru numpy pymongo spacy nltk -y
     
     echo "Installing development packages..."
     conda install -c conda-forge jupyter ipython black pytest -y
