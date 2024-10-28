@@ -30,9 +30,10 @@ class IndexEntry:
 class TextSummarizer:
     def __init__(self, output_dir: str = "data"):
         """Initialize the text summarizer with spaCy NLP"""
-        self.output_dir = Path(output_dir)
+        # Convert output_dir to absolute path
+        self.output_dir = Path(output_dir).resolve()
         self.nlp = self._initialize_spacy()
-        logger.info("Initialized TextSummarizer")
+        logger.info(f"Initialized TextSummarizer with output directory: {self.output_dir}")
 
     def _initialize_spacy(self) -> Language:
         """Initialize spaCy with error handling"""
@@ -68,6 +69,7 @@ class TextSummarizer:
     def process_html_file(self, file_path: Path) -> Optional[IndexEntry]:
         """Process a single HTML file and return a content"""
         try:
+            logger.debug(f"Processing file: {file_path}")
             with open(file_path, 'r', encoding='utf-8') as f:
                 soup = BeautifulSoup(f, 'html.parser')
 
@@ -91,11 +93,13 @@ class TextSummarizer:
                 relative_path = str(file_path.relative_to(Path.cwd()))
                 url_path = f"https://kevinluzbetak.com/{relative_path}"
 
-                return IndexEntry(
+                entry = IndexEntry(
                     url=url_path.strip(),
                     title=file_path.name,
                     content=content
                 )
+                logger.debug(f"Created entry for {file_path}")
+                return entry
 
         except Exception as e:
             logger.error(f"Error processing {file_path}: {e}")
@@ -103,34 +107,43 @@ class TextSummarizer:
 
     def _write_index_file(self, entries: List[IndexEntry]) -> None:
         """Write the summaries to a JSON file"""
-        self.output_dir.mkdir(exist_ok=True)
-        output_file = self.output_dir / "search-index.json"
-
-        # Final validation
-        valid_entries = [
-            vars(entry) for entry in entries
-            if entry.url and entry.title and entry.content
-        ]
-
-        if not valid_entries:
-            logger.error("No valid entries to write!")
-            return
-
         try:
+            # Create output directory if it doesn't exist
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Ensuring output directory exists: {self.output_dir}")
+
+            output_file = self.output_dir / "search-index.json"
+            logger.info(f"Writing to output file: {output_file}")
+
+            # Final validation
+            valid_entries = [
+                vars(entry) for entry in entries
+                if entry and entry.url and entry.title and entry.content
+            ]
+
+            if not valid_entries:
+                logger.error("No valid entries to write!")
+                return
+
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(valid_entries, f, indent=2, ensure_ascii=False)
             logger.info(f"Successfully created {output_file} with {len(valid_entries)} entries")
+
         except Exception as e:
-            logger.error(f"Error writing index file: {e}")
+            logger.error(f"Error writing index file: {e}", exc_info=True)
             raise
 
     def generate_index(self) -> None:
         """Generate the content index from HTML files"""
         logger.info("Starting content index generation...")
 
+        # Get absolute path of current directory
+        current_dir = Path.cwd()
+        logger.info(f"Current working directory: {current_dir}")
+
         # Collect HTML files
         html_files = [
-            p for p in Path.cwd().rglob("*.html")
+            p for p in current_dir.rglob("*.html")
             if p.name != "index.html" and not str(p).startswith(str(self.output_dir))
         ]
 
@@ -139,6 +152,7 @@ class TextSummarizer:
             return
 
         logger.info(f"Found {len(html_files)} HTML files to process")
+        logger.debug(f"Files to process: {[str(f) for f in html_files]}")
 
         # Process files in parallel
         with ThreadPoolExecutor() as executor:
@@ -150,6 +164,8 @@ class TextSummarizer:
         if not entries:
             logger.error("No valid entries generated from HTML files")
             return
+
+        logger.info(f"Generated {len(entries)} valid entries")
 
         # Write summaries to JSON file
         self._write_index_file(entries)
@@ -167,13 +183,6 @@ def main():
         default="data",
         help="Output directory for the content index"
     )
-    # Add the summarization method argument
-    parser.add_argument(
-        "--summarize", "-s",
-        choices=["basic", "textrank"],
-        default="textrank",
-        help="Summarization method to use"
-    )
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -186,10 +195,11 @@ def main():
         logger.setLevel(logging.DEBUG)
 
     try:
-        # Pass the summarization method to TextSummarizer
-        summarizer = TextSummarizer(args.output_dir, summarization_method=args.summarize)
+        summarizer = TextSummarizer(args.output_dir)
         summarizer.generate_index()
     except Exception as e:
-        logger.error(f"Failed to generate content index: {e}")
+        logger.error(f"Failed to generate content index: {e}", exc_info=True)
         exit(1)
 
+if __name__ == "__main__":
+    main()
