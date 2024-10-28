@@ -1,4 +1,5 @@
-# query.py
+#!/usr/bin/env python3
+
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
@@ -75,6 +76,10 @@ class QueryEngine:
             )
             
             logger.info(f"Found {len(similar_docs)} similar documents")
+            
+            if not similar_docs:
+                logger.warning("No similar documents found")
+                return []
             
             # Format the results
             formatted_docs = []
@@ -169,3 +174,7 @@ async def search(request: SearchRequest):
             status_code=500,
             detail=f"Error processing search request: {str(e)}"
         )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
