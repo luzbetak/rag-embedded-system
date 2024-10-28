@@ -63,7 +63,7 @@ class RAGSearchInterface:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     self.api_url,
-                    json={"text": query, "top_k": 5}
+                    json={"text": query, "top_k": 3}
                 ) as response:
                     if response.status == 200:
                         data = await response.json()

@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
-import os
-# Set OpenBLAS environment variables to suppress warnings and control threading
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['OPENBLAS_MAIN_FREE'] = '1'
-os.environ['OMP_NUM_THREADS'] = '1'
-
 from database import Database
 from data_ingestion import DataIngestionPipeline
 from vectorization import VectorizationPipeline
 from loguru import logger
 import json
+import os
 
 search_index = 'data/search-index.json'
 
@@ -60,11 +55,11 @@ def main():
     while True:
         print("\nOptions:")
         print("1. Initialize database (will delete existing data)")
-        print("2. Load documents from data/search-index.json")
+        print("2. Load documents from data/documents.json")
         print("3. Exit")
-    
+        
         choice = input("\nEnter your choice (1-3): ")
-    
+        
         if choice == '1':
             init_database()
         elif choice == '2':
@@ -74,7 +69,7 @@ def main():
             break
         else:
             print("\nInvalid choice. Please try again.")
-    
+        
         input("\nPress Enter to continue...")
 
 if __name__ == "__main__":
