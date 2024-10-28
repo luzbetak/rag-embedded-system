@@ -1,19 +1,23 @@
-# RAG System
+Retrieval-Augmented Generation (RAG)
+====================================
 
-A Retrieval-Augmented Generation (RAG) system using MongoDB for document storage and sentence-transformers for embeddings.
+RAG system using MongoDB for document storage and sentence-transformers for embeddings.
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Quick Start
 
 ```bash
 # Install dependencies
-pip install spacy transformers torch networkx fastapi uvicorn loguru rich pymongo beautifulsoup4
+pip install spacy transformers torch networkx fastapi
+pip install uvicorn loguru rich pymongo beautifulsoup4
 python -m spacy download en_core_web_sm
 
 # Process HTML files
 python 2-process-unstructured-html.py -s textrank
 
-# Initialize database
+# Initialize database (will delete existing data)
+# Load documents from data/search-index.json
+# Show document count
 python 4-init-rag-db.py
 
 # Option 1: API-based search
@@ -24,22 +28,28 @@ python 6-api-rag-search.py
 python 7-cli-rag-search.py
 ```
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Files
 
 ```bash
-├── 2-process-unstructured-html.py   # Process HTML files and generate index
-├── 3-document_validator.py          # Validate and summarize documents
+├── 1-ai/                           # Directory with unstructured HTML files
+├── 2-process-unstructured-html.py  # Process HTML files and generate index
+├── 3-document_validator.py         # Validate and summarize documents
 ├── 4-init-rag-db.py                # Initialize MongoDB and store documents
 ├── 5-fastapi-uvicorn-server.sh     # Start FastAPI server
 ├── 6-api-rag-search.py             # API-based search tool
 └── 7-cli-rag-search.py             # Direct CLI search tool
+├── database.py                     # MongoDB database interactions
+├── query.py                        # Search and retrieval engine
+├── vectorization.py                # Handles document embedding
+├── config.py                       # System configuration
 ```
 
-## Default Embedding Model all-MiniLM-L6-v2
+-----------------------------------------------------------------------------------------------------
+## Default Embedding Model:
 The all-MiniLM-L6-v2 is a lightweight and efficient transformer model that's popular for generating sentence embeddings. Here are its key characteristics:
 
-## Architecture:
+## Architecture all-MiniLM-L6-v2:
 Based on MiniLM architecture, which is a distilled version of larger transformer models
 6 layers (L6 in the name) making it quite compact
 Trained using knowledge distillation from larger models
@@ -64,8 +74,7 @@ Cases where a good speed/performance trade-off is needed
 
 It's often considered a good default choice when you need reliable embeddings without excessive computational overhead. The model strikes a nice balance between efficiency and effectiveness for most common use cases.
 
-### Alternative Embedding Models
-
+### Alternative Embedding Models:
 - sentence-transformers/all-MiniLM-L6-v2
 - sentence-transformers/all-mpnet-base-v2                      # Better quality, slower
 - sentence-transformers/multi-qa-MiniLM-L6-cos-v1              # Optimized for QA
@@ -75,8 +84,7 @@ It's often considered a good default choice when you need reliable embeddings wi
 Summarization: TextRank (default), spaCy, BART
 
 
-## Additional Notes
-
+## Additional Notes:
 - The script uses sentence-transformers for generating embeddings
 - Default model: 'sentence-transformers/all-MiniLM-L6-v2'
 - Embedding dimension: 384
@@ -84,9 +92,12 @@ Summarization: TextRank (default), spaCy, BART
 - Logging is handled by loguru for better debugging
 
 
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Process Unstructured HTML and Summarization
 ```bash
+pip install spacy networkx numpy beautifulsoup4
+python -m spacy download en_core_web_sm
+
 # Run with TextRank (default)
 python 2-process-unstructured-html.py
 
@@ -97,7 +108,7 @@ python 2-process-unstructured-html.py --summarize textrank
 # Run with debug logging
 python 2-process-unstructured-html.py --debug
 ```
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
 ## Document Summarization Validation
 ```bash
 python -m spacy download en_core_web_sm
@@ -121,4 +132,4 @@ python document_validator.py --summarize spacy
 python document_validator.py --summarize transformers
 
 ```
-------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------
