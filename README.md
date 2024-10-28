@@ -28,18 +28,19 @@ python 7-cli-rag-search.py
 ## Files
 
 ```bash
+├── 1-ai                             # Directory with unstructured HTML files  
 ├── 2-process-unstructured-html.py   # Process HTML files and generate index
 ├── 3-document_validator.py          # Validate and summarize documents
-├── 4-init-rag-db.py                # Initialize MongoDB and store documents
-├── 5-fastapi-uvicorn-server.sh     # Start FastAPI server
-├── 6-api-rag-search.py             # API-based search tool
-└── 7-cli-rag-search.py             # Direct CLI search tool
+├── 4-init-rag-db.py                 # Initialize MongoDB and store documents
+├── 5-fastapi-uvicorn-server.sh      # Start FastAPI server
+├── 6-api-rag-search.py              # API-based search tool
+└── 7-cli-rag-search.py              # Direct CLI search tool
 ```
 
-## Default Embedding Model all-MiniLM-L6-v2
+## Default Embedding Model:
 The all-MiniLM-L6-v2 is a lightweight and efficient transformer model that's popular for generating sentence embeddings. Here are its key characteristics:
 
-## Architecture:
+## Architecture all-MiniLM-L6-v2:
 Based on MiniLM architecture, which is a distilled version of larger transformer models
 6 layers (L6 in the name) making it quite compact
 Trained using knowledge distillation from larger models
@@ -64,8 +65,7 @@ Cases where a good speed/performance trade-off is needed
 
 It's often considered a good default choice when you need reliable embeddings without excessive computational overhead. The model strikes a nice balance between efficiency and effectiveness for most common use cases.
 
-### Alternative Embedding Models
-
+### Alternative Embedding Models:
 - sentence-transformers/all-MiniLM-L6-v2
 - sentence-transformers/all-mpnet-base-v2                      # Better quality, slower
 - sentence-transformers/multi-qa-MiniLM-L6-cos-v1              # Optimized for QA
@@ -75,8 +75,7 @@ It's often considered a good default choice when you need reliable embeddings wi
 Summarization: TextRank (default), spaCy, BART
 
 
-## Additional Notes
-
+## Additional Notes:
 - The script uses sentence-transformers for generating embeddings
 - Default model: 'sentence-transformers/all-MiniLM-L6-v2'
 - Embedding dimension: 384
