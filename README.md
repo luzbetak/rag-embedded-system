@@ -87,6 +87,9 @@ Summarization: TextRank (default), spaCy, BART
 -----------------------------------------------------------------------------------------------------
 ## Process Unstructured HTML and Summarization
 ```bash
+pip install spacy networkx numpy beautifulsoup4
+python -m spacy download en_core_web_sm
+
 # Run with TextRank (default)
 python 2-process-unstructured-html.py
 
