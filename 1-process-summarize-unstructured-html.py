@@ -27,18 +27,18 @@ class DateTimeEncoder(JSONEncoder):
 class IndexEntry:
     """Data class for storing content data"""
     def __init__(self, url: str, title: str, content: str):
-        self.url = url
-        self.title = title
-        self.content = content
+        self.url        = url
+        self.title      = title
+        self.content    = content
         self.created_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
 
     def to_dict(self):
         """Convert entry to dictionary with ISO format dates"""
         return {
-            'url': self.url,
-            'title': self.title,
-            'content': self.content,
+            'url':        self.url,
+            'title':      self.title,
+            'content':    self.content,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
@@ -99,14 +99,14 @@ class TextSummarizer:
                     logger.warning(f"Skipping {file_path}: No meaningful content")
                     return None
 
-                content = self.summarize_text(clean_body_text)
+                content       = self.summarize_text(clean_body_text)
                 relative_path = str(file_path.relative_to(Path.cwd()))
-                url_path = f"https://luzbetak.github.io/{relative_path}"
+                url_path      = f"https://luzbetak.github.io/{relative_path}"
 
                 return IndexEntry(
-                    url=url_path.strip(),
-                    title=file_path.name,
-                    content=content
+                    url     = url_path.strip(),
+                    title   = file_path.name,
+                    content = content
                 )
 
         except Exception as e:
