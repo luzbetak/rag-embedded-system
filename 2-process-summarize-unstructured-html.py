@@ -52,11 +52,11 @@ class IndexEntry:
 class TextSummarizer:
     def __init__(self, output_dir: str = "data", mongodb_uri: str = "mongodb://localhost:27017/"):
         """Initialize the text summarizer with spaCy NLP and MongoDB connection"""
-        self.output_dir = Path(output_dir).resolve()
-        self.nlp = self._initialize_spacy()
+        self.output_dir   = Path(output_dir).resolve()
+        self.nlp          = self._initialize_spacy()
         self.mongo_client = MongoClient(mongodb_uri)
-        self.db = self.mongo_client.rag_database
-        self.collection = self.db.documents
+        self.db           = self.mongo_client.rag_database
+        self.collection   = self.db.documents
         logger.info(f"Initialized TextSummarizer with output directory: {self.output_dir}")
         logger.info(f"Connected to MongoDB database: {self.db.name}")
 
