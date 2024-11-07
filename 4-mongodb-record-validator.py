@@ -51,7 +51,7 @@ def explore_mongodb():
 
     # Set individual column widths
     main_table.max_width["Field"] = 15
-    main_table.max_width["Value"] = 80 
+    main_table.max_width["Value"] = 70 
 
     # Display each sample
     for i, sample in enumerate(samples, 1):
