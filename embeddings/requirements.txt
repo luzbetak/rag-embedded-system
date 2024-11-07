@@ -1,0 +1,8 @@
+scipy
+sentence-transformers
+numpy
+scipy
+prettytable
+matplotlib
+seaborn
+scikit-learn
