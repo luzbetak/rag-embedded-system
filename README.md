@@ -28,7 +28,7 @@ python 6-api-rag-search.py
 python 7-cli-rag-search.py
 ```
 
------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------
 ## Files
 
 ```bash
@@ -46,8 +46,7 @@ python 7-cli-rag-search.py
 ├── vectorization.py                         # Handles document embedding
 └── query.py                                 # Search and retrieval engine
 ```
-
------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------
 ## Default Embedding Model:
 The all-MiniLM-L6-v2 is a lightweight and efficient transformer model that's popular for generating sentence embeddings. Here are its key characteristics:
 
