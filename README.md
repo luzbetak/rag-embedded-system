@@ -134,3 +134,5 @@ python document_validator.py --summarize transformers
 
 ```
 -----------------------------------------------------------------------------------------------------
+![Word Similarity Heatmap](embeddings/similarity_heatmap.png)
+
