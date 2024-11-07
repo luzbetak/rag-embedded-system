@@ -14,23 +14,10 @@ model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 
 # Enhanced input texts with related concepts
 texts = [
-    # Animals
-    "cat",
-    "kitten",
-    "dog",
-    "puppy",
-    # Technology
-    "computer",
-    "laptop",
-    "smartphone",
-    # Food
-    "apple",
-    "banana",
-    "fruit",
-    # Transportation
-    "car",
-    "automobile",
-    "vehicle"
+    "cat",      "kitten",     "dog",        "puppy",     # Animals
+    "computer", "laptop",     "smartphone", "mac book",  # Technology
+    "apple",    "banana",     "fruit",      "pineapple", # Food
+    "car",      "automobile", "vehicle",    "airplane",  # Transportation
 ]
 
 # Get embeddings

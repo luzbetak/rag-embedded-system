@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 
-import re
-import sys
-from typing import Dict, Any, Optional, List, Literal
-from loguru import logger
-import json
-from pathlib import Path
-import spacy
-from transformers import pipeline
-from rich import print
+import re, sys, json, spacy
+from loguru       import logger
+from pathlib      import Path
 from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
+from rich         import print
+from rich.panel   import Panel
+from rich.table   import Table
+from transformers import pipeline
+from typing       import Dict, Any, Optional, List, Literal
 
 # Configure logger
 logger.remove()
@@ -28,9 +25,9 @@ class DocumentValidator:
                  default_output='data/validated-index.json',
                  summarization_method: Literal['spacy', 'transformers', 'textrank', 'basic'] = 'basic'):
         """Initialize the document validator with summarization options"""
-        self.required_fields = ['url', 'title', 'content']
-        self.default_input = default_input
-        self.default_output = default_output
+        self.required_fields      = ['url', 'title', 'content']
+        self.default_input        = default_input
+        self.default_output       = default_output
         self.summarization_method = summarization_method
         
         # Initialize summarization components based on method
@@ -98,8 +95,8 @@ class DocumentValidator:
                 logger.warning(f"Document missing required fields: {missing_fields}")
                 return None
 
-            cleaned_url = self.clean_url(doc['url'])
-            cleaned_title = self.clean_title(doc['title'])
+            cleaned_url     = self.clean_url(doc['url'])
+            cleaned_title   = self.clean_title(doc['title'])
             cleaned_content = self.clean_content(doc['content'])
 
             if not cleaned_url or not re.match(r'^https?://', cleaned_url):
@@ -204,8 +201,8 @@ class DocumentValidator:
 
     def batch_validate_documents(self, documents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Validate a batch of documents with progress tracking"""
-        valid_docs = []
-        total_docs = len(documents)
+        valid_docs   = []
+        total_docs   = len(documents)
         skipped_docs = 0
 
         with console.status("[bold green]Validating documents...") as status:
@@ -236,19 +233,21 @@ class DocumentValidator:
 
         total_docs = len(documents)
         avg_word_count = sum(doc['metadata']['word_count'] for doc in documents) / total_docs
+        
         avg_reduction = sum((doc['metadata']['original_length'] - doc['metadata']['cleaned_length']) / 
-                          doc['metadata']['original_length'] * 100 for doc in documents) / total_docs
+                             doc['metadata']['original_length'] * 100 for doc in documents) / total_docs
+        
         avg_summary_length = sum(doc['metadata']['summary_length'] for doc in documents) / total_docs
 
         stats = [
-            ("Total Documents", str(total_docs)),
-            ("Unique URLs", str(len(set(doc['url'] for doc in documents)))),
-            ("Average Word Count", f"{avg_word_count:.1f}"),
+            ("Total Documents",           str(total_docs)),
+            ("Unique URLs",               str(len(set(doc['url']                for doc in documents)))),
+            ("Average Word Count",        f"{avg_word_count:.1f}"),
             ("Average Content Reduction", f"{avg_reduction:.1f}%"),
-            ("Shortest Document", str(min(doc['metadata']['word_count'] for doc in documents))),
-            ("Longest Document", str(max(doc['metadata']['word_count'] for doc in documents))),
-            ("Average Summary Length", f"{avg_summary_length:.1f} words"),
-            ("Summarization Method", self.summarization_method)
+            ("Shortest Document",         str(min(doc['metadata']['word_count'] for doc in documents))),
+            ("Longest Document",          str(max(doc['metadata']['word_count'] for doc in documents))),
+            ("Average Summary Length",    f"{avg_summary_length:.1f} words"),
+            ("Summarization Method",      self.summarization_method)
         ]
 
         for metric, value in stats:
