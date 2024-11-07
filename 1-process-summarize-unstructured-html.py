@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 
-import os
-import json
-import re
-import logging
-from pathlib import Path
-from typing import List, Optional
+import argparse, json, logging, os, re, spacy
+from bs4                import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
-import argparse
-from pymongo import MongoClient
-from datetime import datetime
-from json import JSONEncoder
-
-from bs4 import BeautifulSoup
-import spacy
-from spacy.language import Language
+from datetime           import datetime
+from json               import JSONEncoder
+from pathlib            import Path
+from pymongo            import MongoClient
+from spacy.language     import Language
+from typing             import List, Optional
 
 # Set up logging
 logging.basicConfig(
