@@ -80,11 +80,11 @@ print("-" * 50)
 
 # Group similar concepts
 concept_groups = [
-    ("cat", "kitten"),
-    ("dog", "puppy"),
-    ("computer", "laptop"),
-    ("car", "automobile", "vehicle"),
-    ("apple", "banana", "fruit")
+    ("cat",      "kitten"),
+    ("dog",      "puppy"),
+    ("computer", "laptop",     "mac book"),
+    ("car",      "automobile", "vehicle"),
+    ("apple",    "banana",     "fruit")
 ]
 
 for group in concept_groups:
@@ -97,8 +97,8 @@ for group in concept_groups:
             idx1 = texts.index(group[i])
             idx2 = texts.index(group[j])
             
-            similarity = 1 - distance.cosine(embeddings[idx1], embeddings[idx2])
-            avg_magnitude = (np.linalg.norm(embeddings[idx1]) + np.linalg.norm(embeddings[idx2])) / 2
+            similarity      = 1 - distance.cosine(embeddings[idx1], embeddings[idx2])
+            avg_magnitude   = (np.linalg.norm(embeddings[idx1]) + np.linalg.norm(embeddings[idx2])) / 2
             dim_correlation = np.corrcoef(embeddings[idx1], embeddings[idx2])[0, 1]
             
             group_table.add_row([
@@ -121,10 +121,10 @@ stats_table.align = "r"
 
 for text, embedding in zip(texts, embeddings):
     magnitude = np.linalg.norm(embedding)
-    mean_val = np.mean(embedding)
-    std_dev = np.std(embedding)
-    max_dim = np.max(embedding)
-    min_dim = np.min(embedding)
+    mean_val  = np.mean(embedding)
+    std_dev   = np.std(embedding)
+    max_dim   = np.max(embedding)
+    min_dim   = np.min(embedding)
     
     stats_table.add_row([
         text,
