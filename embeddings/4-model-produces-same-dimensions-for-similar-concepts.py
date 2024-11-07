@@ -15,7 +15,7 @@ model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 # Enhanced input texts with related concepts
 texts = [
     "cat",      "kitten",     "dog",        "puppy",     # Animals
-    "computer", "laptop",     "smartphone", "mac book",  # Technology
+    "computer", "laptop",     "smartphone", "macbook",   # Technology
     "apple",    "banana",     "fruit",      "pineapple", # Food
     "car",      "automobile", "vehicle",    "airplane",  # Transportation
 ]
@@ -82,7 +82,7 @@ print("-" * 50)
 concept_groups = [
     ("cat",      "kitten"),
     ("dog",      "puppy"),
-    ("computer", "laptop",     "mac book"),
+    ("computer", "laptop",     "macbook"),
     ("car",      "automobile", "vehicle"),
     ("apple",    "banana",     "fruit")
 ]
