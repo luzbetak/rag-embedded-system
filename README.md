@@ -32,14 +32,14 @@ python 7-cli-rag-search.py
 ## Files
 
 ```bash
-├── 2-process-summarize-unstructured-html.py # Process HTML files and generate index
+┌── 2-process-summarize-unstructured-html.py # Process HTML files and generate index
 ├── 3-document-summarize-validator.py        # Validate and summarize documents
 ├── 4-initialize-db-load-documents.py        # Initialize MongoDB and store documents
 ├── 5-cli-rag-search.py                      # Direct CLI search tool
 ├── 6-run-fastapi-uvicorn-server.sh          # Start FastAPI server
-├── 7-api-rag-search.py                      # API-based search tool
+└── 7-api-rag-search.py                      # API-based search tool
 
-├── ai/                                      # Directory with unstructured HTML files
+┌── ai/                                      # Directory with unstructured HTML files
 ├── config.py                                # System configuration
 ├── database.py                              # MongoDB database interactions
 ├── data_ingestion.py                        # Data loading and preprocessing pipeline
