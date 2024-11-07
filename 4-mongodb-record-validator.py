@@ -12,7 +12,7 @@ def format_embedding(embedding, num_values=64):
         return f"[{', '.join(values)}" + f"... ({len(embedding)} total)]"
     return str(embedding)
 
-def format_value(value, max_length=512):
+def format_value(value, max_length=700):
     """Format values for display, truncating if necessary"""
     if isinstance(value, (list, np.ndarray)):
         return format_embedding(value)
@@ -51,7 +51,7 @@ def explore_mongodb():
 
     # Set individual column widths
     main_table.max_width["Field"] = 15
-    main_table.max_width["Value"] = 70 
+    main_table.max_width["Value"] = 160 
 
     # Display each sample
     for i, sample in enumerate(samples, 1):
