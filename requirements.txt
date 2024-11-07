@@ -11,3 +11,7 @@ networkx
 numpy 
 beautifulsoup4
 prettytable
+
+# pip install spacy transformers torch networkx fastapi
+# pip install uvicorn loguru rich pymongo beautifulsoup4
+# python -m spacy download en_core_web_sm

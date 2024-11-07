@@ -3,29 +3,19 @@ Retrieval-Augmented Generation (RAG) by Kevin Luzbetak
 
 RAG system using MongoDB for document storage and sentence-transformers for embeddings.
 
------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------
 ## Quick Start
 
 ```bash
-# Install dependencies
-pip install spacy transformers torch networkx fastapi
-pip install uvicorn loguru rich pymongo beautifulsoup4
-python -m spacy download en_core_web_sm
-
 # Process HTML files
-python 2-process-unstructured-html.py -s textrank
+python 1-process-summarize-unstructured-html.py -s textrank
 
-# Initialize database (will delete existing data)
+# Initialize database (delete existing data)
 # Load documents from data/search-index.json
-# Show document count
-python 4-init-rag-db.py
+./2-document-summarize-validator.py
 
-# Option 1: API-based search
-./5-fastapi-uvicorn-server.sh
-python 6-api-rag-search.py
-
-# Option 2: Direct CLI search
-python 7-cli-rag-search.py
+# Direct CLI search
+./4-cli-rag-search.py 
 ```
 
 --------------------------------------------------------------------------------------------
