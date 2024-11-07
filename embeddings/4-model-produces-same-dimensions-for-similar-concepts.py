@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from sentence_transformers import SentenceTransformer
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from prettytable import PrettyTable
 from scipy.spatial import distance
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.preprocessing import StandardScaler
+from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 # Load the model
 model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
@@ -23,17 +23,13 @@ texts = [
 # Get embeddings
 embeddings = model.encode(texts)
 
-# Create main table for embeddings
-main_table = PrettyTable()
-
-# Define column names
+main_table  = PrettyTable()
 field_names = ["Text", "Length"]
 field_names.extend([f"Dim_{i+1}" for i in range(12)])
 main_table.field_names = field_names
-
-# Set alignment
-main_table.align["Text"] = "r"
+main_table.align["Text"]   = "r"
 main_table.align["Length"] = "c"
+
 for i in range(12):
     main_table.align[f"Dim_{i+1}"] = "c"
 
