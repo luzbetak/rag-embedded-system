@@ -107,7 +107,7 @@ class TextSummarizer:
 
                 content = self.summarize_text(clean_body_text)
                 relative_path = str(file_path.relative_to(Path.cwd()))
-                url_path = f"https://kevinluzbetak.com/{relative_path}"
+                url_path = f"https://luzbetak.github.io/{relative_path}"
 
                 return IndexEntry(
                     url=url_path.strip(),
