@@ -10,3 +10,4 @@ spacy
 networkx 
 numpy 
 beautifulsoup4
+prettytable

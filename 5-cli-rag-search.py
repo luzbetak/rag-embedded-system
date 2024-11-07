@@ -6,8 +6,8 @@ from loguru import logger
 
 # Set OpenBLAS environment variables
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['OPENBLAS_MAIN_FREE'] = '1'
-os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_MAIN_FREE']   = '1'
+os.environ['OMP_NUM_THREADS']      = '1'
 
 class CLISearch:
     def __init__(self):
