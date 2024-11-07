@@ -30,7 +30,7 @@ This results in:
 
 Below is a similarity heatmap showing the semantic relationships between different words:
 
-![Word Similarity Heatmap](embeddings/similarity_heatmap.png)
+![Word Similarity Heatmap](similarity_heatmap.png)
 
 The heatmap visualizes the cosine similarity between pairs of words, where darker red indicates higher similarity and darker blue indicates lower similarity. Related concepts like "car"/"automobile" and "cat"/"kitten" show strong semantic connections.
 
