@@ -63,6 +63,19 @@ class CLISearch:
         """
         Use BART model for abstractive summarization
         """
+
+        # For longer summaries:
+        max_length = 250  # Allow longer summaries
+        min_length = 50   # Ensure more detailed minimum content
+
+        # For shorter summaries:
+        max_length = 75   # Keep summaries very concise
+        min_length = 15   # Allow very brief summaries
+
+        # For medium summaries:
+        max_length = 100  # Limits summary to ~100 words/tokens - good for paragraph-length summaries that capture main points
+        min_length = 20   # Ensures summary is at least ~20 words/tokens - prevents overly short/incomplete summaries
+
         if self.hf_summarizer is None:
             return None
 
@@ -77,8 +90,8 @@ class CLISearch:
             # Generate summary with conservative length limits
             summary = self.hf_summarizer(
                 text,
-                max_length=256,  # Reduced max length
-                min_length=64,   # Reduced min length
+                max_length=max_length,
+                min_length=min_length,
                 do_sample=False
             )
 
