@@ -3,83 +3,143 @@ import os
 import asyncio
 from query import QueryEngine
 from loguru import logger
-
-# Set OpenBLAS environment variables
-os.environ['OPENBLAS_NUM_THREADS'] = '1'
-os.environ['OPENBLAS_MAIN_FREE']   = '1'
-os.environ['OMP_NUM_THREADS']      = '1'
+from transformers import pipeline
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+from sumy.nlp.stemmers import Stemmer
+from sumy.utils import get_stop_words
+import nltk
+from rouge import Rouge
 
 class CLISearch:
     def __init__(self):
         self.query_engine = QueryEngine()
+        # Initialize summarizer options
+        self.initialize_summarizers()
+        
+    def initialize_summarizers(self):
+        """Initialize different summarization models"""
+        # HuggingFace transformer-based summarizer
+        self.hf_summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+        
+        # SUMY LSA summarizer
+        self.lsa_summarizer = LsaSummarizer(Stemmer('english'))
+        self.lsa_summarizer.stop_words = get_stop_words('english')
+        
+        # ROUGE metric for evaluation
+        self.rouge = Rouge()
+        
+        # Download required NLTK data
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            nltk.download('punkt')
+
+    def summarize_with_transformers(self, text, max_length=130, min_length=30):
+        """
+        Use BART model for abstractive summarization
+        """
+        try:
+            summary = self.hf_summarizer(text, 
+                                       max_length=max_length, 
+                                       min_length=min_length, 
+                                       do_sample=False)
+            return summary[0]['summary_text']
+        except Exception as e:
+            logger.error(f"Transformer summarization failed: {e}")
+            return None
+
+    def summarize_with_sumy(self, text, sentences_count=3):
+        """
+        Use SUMY's LSA for extractive summarization
+        """
+        try:
+            parser = PlaintextParser.from_string(text, Tokenizer("english"))
+            summary = self.lsa_summarizer(parser.document, sentences_count)
+            return ' '.join([str(sentence) for sentence in summary])
+        except Exception as e:
+            logger.error(f"SUMY summarization failed: {e}")
+            return None
+
+    def get_best_summary(self, text, original_query):
+        """
+        Generate and evaluate summaries using different methods
+        """
+        summaries = {}
+        
+        # Generate summaries using different methods
+        transformer_summary = self.summarize_with_transformers(text)
+        if transformer_summary:
+            summaries['transformer'] = transformer_summary
+            
+        sumy_summary = self.summarize_with_sumy(text)
+        if sumy_summary:
+            summaries['sumy'] = sumy_summary
+            
+        if not summaries:
+            return self.fallback_summarization(text)
+            
+        # Evaluate summaries using ROUGE and query relevance
+        best_score = -1
+        best_summary = None
+        
+        for method, summary in summaries.items():
+            # Calculate ROUGE scores
+            try:
+                scores = self.rouge.get_scores(summary, text)[0]
+                rouge_score = (scores['rouge-1']['f'] + scores['rouge-2']['f'] + scores['rouge-l']['f']) / 3
+                
+                # Calculate query term overlap
+                query_terms = set(original_query.lower().split())
+                summary_terms = set(summary.lower().split())
+                query_overlap = len(query_terms.intersection(summary_terms)) / len(query_terms)
+                
+                # Combined score with weights
+                total_score = (0.7 * rouge_score) + (0.3 * query_overlap)
+                
+                if total_score > best_score:
+                    best_score = total_score
+                    best_summary = summary
+                    
+            except Exception as e:
+                logger.error(f"Error evaluating {method} summary: {e}")
+                continue
+                
+        return best_summary or self.fallback_summarization(text)
+
+    def fallback_summarization(self, text, max_sentences=3):
+        """
+        Simple extractive summarization as fallback
+        """
+        sentences = nltk.sent_tokenize(text)
+        return ' '.join(sentences[:max_sentences])
 
     def generate_concise_answer(self, results, query):
         """
-        Combines search results into a brief, focused answer.
-        
-        Args:
-            results (list): List of search result documents
-            query (str): Original search query
-            
-        Returns:
-            str: Concise RAG Answer Generator 
+        Generate concise answer using advanced summarization
         """
         if not results:
             return "No relevant information found."
 
-        # Sort results by similarity score
-        sorted_results = sorted(results, key=lambda x: x.get('score', 0), reverse=True)
+        # Combine relevant content from results
+        combined_text = ' '.join([doc.get('content', '').strip() 
+                                for doc in sorted(results, 
+                                                key=lambda x: x.get('score', 0), 
+                                                reverse=True)])
         
-        # Extract the most relevant sentences from each result
-        key_points = []
-        for doc in sorted_results:
-            content = doc.get('content', '').strip()
-            # Split into sentences and take the most relevant ones
-            sentences = [s.strip() for s in content.split('.') if s.strip()]
-            # Take only first relevant sentence containing the query terms
-            for sentence in sentences:
-                if any(term.lower() in sentence.lower() for term in query.split()):
-                    key_points.append(sentence)
-                    break
-
-        # Limit to top 3 key points
-        key_points = key_points[:3]
+        # Generate summary
+        summary = self.get_best_summary(combined_text, query)
         
-        if not key_points:
-            return "Found results but couldn't extract relevant points for your query."
-
-        # Combine key points into a concise answer
-        if len(key_points) == 1:
-            return f"{key_points[0]}."
-        
-        answer = f"{key_points[0]}. "
-        if len(key_points) >= 2:
-            answer += f"Additionally, {key_points[1].lower()}"
-        if len(key_points) == 3:
-            answer += f". Finally, {key_points[2].lower()}"
-        
-        return answer + "."
+        if not summary:
+            return "Could not generate a summary from the search results."
+            
+        return summary
 
     def print_results(self, results, query):
-        print("\nSearch Results:")
-        print("-" * 50)
-        if not results:
-            print("\nNo documents found.")
-            return
-
-        # Generate and print the concise answer
         print("\nGenerated Answer:")
         print("-" * 50)
         print(self.generate_concise_answer(results, query))
-        
-        # Optionally print detailed results
-        print("\nDetailed Results:")
-        for i, doc in enumerate(results, 1):
-            print(f"\nDocument {i}:")
-            print(f"Title: {doc.get('title', 'N/A')}")
-            if 'score' in doc:
-                print(f"Similarity Score: {doc['score']:.3f}")
-            print("-" * 30)
 
     async def search_loop(self):
         print("\nRAG CLI Search")
@@ -89,12 +149,9 @@ class CLISearch:
 
         while True:
             query = input("\nEnter search query: ")
-
             if query.lower() == 'exit':
-                print("\nGoodbye!")
                 break
 
-            print("\nSearching...")
             try:
                 results = await self.query_engine.search(query)
                 self.print_results(results, query)

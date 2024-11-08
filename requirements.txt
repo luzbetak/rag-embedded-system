@@ -16,3 +16,5 @@ prettytable
 # pip install uvicorn loguru rich pymongo beautifulsoup4
 # python -m spacy download en_core_web_sm
 # pip install transformers torch sumy nltk rouge-score
+# pip install rouge-score  # This is the correct package name
+# pip install transformers torch sumy nltk
