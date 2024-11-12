@@ -3,7 +3,7 @@
 from pymongo import MongoClient
 from prettytable import PrettyTable
 import numpy as np
-from config import Config
+from core.config import Config
 
 def format_embedding(embedding, num_values=64):
     """Format embedding vector to show first num_values with better precision"""

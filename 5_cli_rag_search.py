@@ -2,7 +2,7 @@
 
 import os
 import asyncio
-from query import QueryEngine
+from core.query import QueryEngine
 from loguru import logger
 from transformers import pipeline
 import torch

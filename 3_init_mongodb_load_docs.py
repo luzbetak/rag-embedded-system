@@ -6,9 +6,10 @@ from pathlib import Path
 import json
 from loguru import logger
 from pymongo import ReplaceOne
-from database import Database
-from data_ingestion import DataIngestionPipeline
-from vectorization import VectorizationPipeline
+
+from core.database import Database
+from core.data_ingestion import DataIngestionPipeline
+from core.vectorization import VectorizationPipeline
 
 # Control threading and suppress warnings
 os.environ.update({
