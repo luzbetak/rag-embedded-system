@@ -90,7 +90,7 @@ class CLISearch:
                 return text
 
             # Generate summary with GPU acceleration
-            with torch.cuda.amp.autocast() if torch.cuda.is_available() else torch.no_grad():
+            with torch.amp.autocast('cuda') if torch.cuda.is_available() else torch.no_grad():
                 summary = self.hf_summarizer(
                     text,
                     max_length=max_length,
