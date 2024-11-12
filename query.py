@@ -9,6 +9,7 @@ from typing import List, Optional
 from database import Database
 from vectorization import VectorizationPipeline
 from transformers import pipeline
+import torch
 import numpy as np
 
 # Set OpenBLAS environment variables
@@ -56,7 +57,28 @@ class QueryEngine:
         """Initialize the query engine with necessary components"""
         self.db = Database()
         self.vectorization = VectorizationPipeline()
-        self.generator = pipeline('text2text-generation', model='google/flan-t5-base', max_length=200)
+        
+        # Set up device configuration
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logger.info(f"Using device: {self.device}")
+        
+        # Initialize the text generation pipeline with proper device configuration
+        if torch.cuda.is_available():
+            self.generator = pipeline(
+                'text2text-generation',
+                model='google/flan-t5-base',
+                device=0,  # Use first GPU
+                torch_dtype=torch.float16,  # Use half precision for GPU
+                max_length=200
+            )
+        else:
+            self.generator = pipeline(
+                'text2text-generation',
+                model='google/flan-t5-base',
+                device=-1,  # Use CPU
+                max_length=200
+            )
+        
         logger.info("Initialized query engine")
 
     async def search(self, query: str, top_k: int = 3) -> List[dict]:
@@ -135,6 +157,9 @@ class QueryEngine:
     def close(self):
         """Cleanup resources"""
         self.db.close()
+        # Clean up GPU memory if using CUDA
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 @app.get("/health")
 async def health_check():
