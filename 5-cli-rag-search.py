@@ -5,6 +5,7 @@ import asyncio
 from query import QueryEngine
 from loguru import logger
 from transformers import pipeline
+import torch
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
@@ -20,13 +21,27 @@ class CLISearch:
         self.initialize_summarizers()
         
     def initialize_summarizers(self):
-        """Initialize different summarization models"""
+        """Initialize different summarization models with GPU support"""
         try:
+            # Check if CUDA is available
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            if device == "cuda":
+                logger.info("Using GPU for summarization")
+            else:
+                logger.info("GPU not available, falling back to CPU")
+
+            # Initialize the transformer pipeline with GPU support
             self.hf_summarizer = pipeline(
                 "summarization",
                 model="facebook/bart-large-cnn",
-                device=-1
+                device=0 if device == "cuda" else -1,  # Use first GPU if available
+                torch_dtype=torch.float16 if device == "cuda" else torch.float32  # Use half precision on GPU
             )
+            
+            # Optional: Set torch to use deterministic algorithms for reproducibility
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            
         except Exception as e:
             logger.error(f"Failed to initialize transformer model: {e}")
             self.hf_summarizer = None
@@ -61,21 +76,8 @@ class CLISearch:
 
     def summarize_with_transformers(self, text, max_length=130, min_length=30):
         """
-        Use BART model for abstractive summarization
+        Use BART model for abstractive summarization with GPU acceleration
         """
-
-        # For longer summaries:
-        max_length = 250  # Allow longer summaries
-        min_length = 50   # Ensure more detailed minimum content
-
-        # For shorter summaries:
-        max_length = 75   # Keep summaries very concise
-        min_length = 15   # Allow very brief summaries
-
-        # For medium summaries:
-        max_length = 100  # Limits summary to ~100 words/tokens - good for paragraph-length summaries that capture main points
-        min_length = 20   # Ensures summary is at least ~20 words/tokens - prevents overly short/incomplete summaries
-
         if self.hf_summarizer is None:
             return None
 
@@ -84,16 +86,18 @@ class CLISearch:
             text = self.preprocess_text(text)
             
             # If text is too short, return it as is
-            if len(text.split()) < 50:  # Reduced minimum length
+            if len(text.split()) < 50:
                 return text
 
-            # Generate summary with conservative length limits
-            summary = self.hf_summarizer(
-                text,
-                max_length=max_length,
-                min_length=min_length,
-                do_sample=False
-            )
+            # Generate summary with GPU acceleration
+            with torch.cuda.amp.autocast() if torch.cuda.is_available() else torch.no_grad():
+                summary = self.hf_summarizer(
+                    text,
+                    max_length=max_length,
+                    min_length=min_length,
+                    do_sample=False,
+                    batch_size=1 if torch.cuda.is_available() else None  # Batch size for GPU processing
+                )
 
             if summary and len(summary) > 0:
                 return summary[0]['summary_text']
@@ -103,9 +107,10 @@ class CLISearch:
             logger.error(f"Transformer summarization failed: {e}")
             return None
 
-    def summarize_with_sumy(self, text, sentences_count=2):  # Reduced sentence count
+    def summarize_with_sumy(self, text, sentences_count=2):
         """
         Use SUMY's LSA for extractive summarization
+        Note: SUMY doesn't have direct GPU support
         """
         try:
             text = self.preprocess_text(text)
@@ -119,7 +124,7 @@ class CLISearch:
             logger.error(f"SUMY summarization failed: {e}")
             return None
 
-    def fallback_summarization(self, text, max_sentences=2):  # Reduced sentence count
+    def fallback_summarization(self, text, max_sentences=2):
         """Simple extractive summarization as fallback"""
         try:
             text = self.preprocess_text(text)
@@ -130,14 +135,14 @@ class CLISearch:
             return ' '.join(sentences[:max_sentences])
         except Exception as e:
             logger.error(f"Fallback summarization failed: {e}")
-            return text[:200] + "..."  # Last resort: just truncate
+            return text[:200] + "..."
 
     def get_best_summary(self, text, original_query):
         """Generate and evaluate summaries"""
         if not text or not original_query:
             return "No text to summarize."
 
-        # Try transformer first
+        # Try transformer first (GPU-accelerated)
         summary = self.summarize_with_transformers(text)
         if summary:
             return summary
@@ -182,6 +187,13 @@ class CLISearch:
         print("=" * 50)
         print("Enter 'exit' to quit")
         print("=" * 50)
+        
+        # Print GPU status
+        if torch.cuda.is_available():
+            print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            print("Running on CPU")
+        print("=" * 50)
 
         while True:
             try:
@@ -206,6 +218,9 @@ def main():
         asyncio.run(searcher.search_loop())
     except KeyboardInterrupt:
         print("\nExiting gracefully...")
+        # Clean up GPU memory
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     except Exception as e:
         logger.error(f"Fatal error: {e}")
         print(f"\nFatal error occurred: {str(e)}")
