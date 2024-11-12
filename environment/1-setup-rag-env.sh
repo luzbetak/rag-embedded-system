@@ -28,7 +28,7 @@ install_deps() {
     conda install -c conda-forge pandas sqlalchemy sentence-transformers fastapi uvicorn python-dotenv loguru numpy pymongo spacy nltk -y
     
     echo "Installing development packages..."
-    conda install -c conda-forge jupyter ipython black pytest -y
+    conda install -c conda-forge jupyter ipython black pytest sumy rouge fastapi loguru -y
     
     echo -e "${BLUE}Verifying Python version...${NC}"
     python --version
