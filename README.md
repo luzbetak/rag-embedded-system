@@ -41,19 +41,21 @@ python 1-process-summarize-unstructured-html.py -s textrank
 ## Files
 
 ```bash
-┌── 1-process-summarize-unstructured-html.py # Process HTML files and generate index
-├── 2-document-summarize-validator.py        # Validate and summarize documents
-├── 3-initialize-db-load-documents.py        # Initialize MongoDB and store documents
-├── 4-cli-rag-search.py                      # Direct CLI search tool
-├── 5-run-fastapi-uvicorn-server.sh          # Start FastAPI server
-└── 6-api-rag-search.py                      # API-based search tool
+┌── 1_process_summarize_unstructured_html.py  # Process HTML files and generate index
+├── 2_document_summarize_validator.py         # Validate and summarize documents
+├── 3_init_mongodb_load_docs.py               # Initialize MongoDB and store documents
+├── 4_list_random_mongodb_records.py          # List Random Records from MongoDB 
+└── 5_cli_rag_search.py                       # Direct CLI search tool
 
-┌── ai/                                      # Directory with unstructured HTML files
-├── config.py                                # System configuration
-├── database.py                              # MongoDB database interactions
-├── 6ata_ingestion.py                        # Data loading and preprocessing pipeline
-├── vectorization.py                         # Handles document embedding
-└── query.py                                 # Search and retrieval engine
+core
+├── config.py                                 # System configuration
+├── database.py                               # MongoDB database interactions
+├── data_ingestion.py                         # Data loading and preprocessing pipeline
+├── query.py                                  # Search and retrieval engine
+└── vectorization.py                          # Handles document embedding
+
+┌── ai/                                       # Directory with unstructured HTML files
+
 ```
 --------------------------------------------------------------------------------------------
 ## Default Embedding Model:
