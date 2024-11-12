@@ -155,3 +155,48 @@ python document_validator.py --summarize transformers
 +-----------+------------------------------------------------------------------------+
 ```
 
+
+## TODO: Rag Structure
+```
+rag-system/
+├── data/
+│   ├── search-index.json       # Move from data/search-index.json
+│   └── embeddings/             # Move from embeddings/
+│
+├── src/
+│   └── rag/
+│       ├── cli/
+│       │   ├── __init__.py
+│       │   └── search_cli.py           # Renamed from 5-cli-rag-search.py
+│       │
+│       ├── core/                       # Core functionality
+│       │   ├── __init__.py
+│       │   ├── config.py               # From core/config.py
+│       │   ├── database.py             # From core/database.py
+│       │   ├── query.py                # From core/query.py
+│       │   └── vectorization.py        # From core/vectorization.py
+│       │
+│       ├── processors/                 # Data processing modules
+│       │   ├── __init__.py
+│       │   ├── data_ingestion.py       # From core/data_ingestion.py
+│       │   └── summarizer.py           # New file for summarization logic from cli/search_cli.py
+│       │
+│       ├── scripts/                    # Standalone scripts
+│       │   ├── __init__.py
+│       │   ├── init_database.py        # Renamed from 3-initialize-db-load-documents.py
+│       │   ├── process_html.py         # Renamed from 1-process-summarize-unstructured-html.py
+│       │   ├── validate_records.py     # Renamed from 4-mongodb-record-validator.py
+│       │   └── drop_database.py        # From drop_database.py
+│       │
+│       └── utils/                      # Utility functions
+│           ├── __init__.py
+│           └── logging.py              # New file for logging configuration
+│
+└── tests/                    # Test files mirroring src structure
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_cli/
+    ├── test_core/
+    ├── test_processors/
+    └── test_utils/
+```
