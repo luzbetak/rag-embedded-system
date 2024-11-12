@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 import json
 import pandas as pd
 from loguru import logger
-from database import Database
+from core.database import Database
 
 class DataIngestionPipeline:
     def __init__(self):  # Remove db_url parameter

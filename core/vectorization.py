@@ -1,8 +1,8 @@
 # vectorization.py
 from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
-from config import Config
-from database import Database
+from core.config import Config
+from core.database import Database
 from loguru import logger
 
 class VectorizationPipeline:

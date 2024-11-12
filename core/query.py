@@ -6,11 +6,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from loguru import logger
 from typing import List, Optional
-from database import Database
-from vectorization import VectorizationPipeline
 from transformers import pipeline
 import torch
 import numpy as np
+from core.database import Database
+from core.vectorization import VectorizationPipeline
 
 # Set OpenBLAS environment variables
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
