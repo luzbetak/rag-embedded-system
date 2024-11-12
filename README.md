@@ -1,7 +1,26 @@
-Retrieval-Augmented Generation (RAG) by Kevin Luzbetak
-======================================================
+KnowledgeForge - GPU-Accelerated RAG System  
+===========================================
 
-RAG system using MongoDB for document storage and sentence-transformers for embeddings.
+KnowledgeForge is a high-performance Retrieval-Augmented Generation (RAG)
+system that combines vector embeddings, GPU acceleration, and MongoDB for
+advanced document processing and semantic search. Features include BART-based
+summarization, semantic search with vector similarity, and efficient batch
+processing. Built with PyTorch and sentence-transformers, it offers both CLI
+and programmatic interfaces for document ingestion, search, and analysis.
+
+--------------------------------------------------------------------------------------------
+- rag
+- semantic-search
+- document-processing
+- vector-embeddings
+- gpu-acceleration
+- pytorch
+- mongodb
+- nlp
+- text-summarization
+- bart
+- sentence-transformers
+- knowledge-base
 
 --------------------------------------------------------------------------------------------
 ## Quick Start
