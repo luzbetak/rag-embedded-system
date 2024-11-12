@@ -23,21 +23,6 @@ and programmatic interfaces for document ingestion, search, and analysis.
 - knowledge-base
 
 --------------------------------------------------------------------------------------------
-## Quick Start
-
-```bash
-# Process HTML files
-python 1-process-summarize-unstructured-html.py -s textrank
-
-# Initialize database (delete existing data)
-# Load documents from data/search-index.json
-./2-document-summarize-validator.py
-
-# Direct CLI search
-./4-cli-rag-search.py 
-```
-
---------------------------------------------------------------------------------------------
 ## Files
 
 ```bash
